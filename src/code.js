@@ -1,195 +1,19 @@
 /* eslint-disable */
+import "./mathlib.js"
 import * as LZString from 'lz-string';
+import { modernRandom } from "./rand";
 
-const $ = {};
 /**
  * Empty function that does nothing
  * @returns {void}
  */
-$.noop = () => { };
+window.$.noop = () => { };
 
 /**
  * Returns the current timestamp in milliseconds
  * @returns {number} Current timestamp in milliseconds
  */
-$.now = () => new Date().getTime();
-(function () {
-  /**
-   * Safely adds two 32-bit integers without overflow
-   * @param {number} x - First 32-bit integer
-   * @param {number} y - Second 32-bit integer
-   * @returns {number} Sum of x and y as a 32-bit integer
-   */
-  const safe_add = function (x, y) {
-    const lsw = (x & 0xFFFF) + (y & 0xFFFF);
-    const msw = (x >> 16) + (y >> 16) + (lsw >> 16);
-    return (msw << 16) | (lsw & 0xFFFF);
-  };
-
-  /**
-   * Bitwise rotate 32-bit number to the right
-   * @param {number} X - 32-bit integer
-   * @param {number} n - Number of bits to rotate
-   * @returns {number} Rotated result
-   */
-  const S = function (X, n) {
-    return (X >>> n) | (X << (32 - n));
-  };
-
-  /**
-   * Bitwise shift 32-bit number to the right
-   * @param {number} X - 32-bit integer
-   * @param {number} n - Number of bits to shift
-   * @returns {number} Shifted result
-   */
-  const R = function (X, n) {
-    return (X >>> n);
-  };
-
-  /**
-   * SHA-256 Ch function
-   * @param {number} x - 32-bit integer
-   * @param {number} y - 32-bit integer
-   * @param {number} z - 32-bit integer
-   * @returns {number} Result of Ch function
-   */
-  const Ch = function (x, y, z) {
-    return ((x & y) ^ ((~x) & z));
-  };
-
-  /**
-   * SHA-256 Maj function
-   * @param {number} x - 32-bit integer
-   * @param {number} y - 32-bit integer
-   * @param {number} z - 32-bit integer
-   * @returns {number} Result of Maj function
-   */
-  const Maj = function (x, y, z) {
-    return ((x & y) ^ (x & z) ^ (y & z));
-  };
-
-  /**
-   * SHA-256 Sigma0 function
-   * @param {number} x - 32-bit integer
-   * @returns {number} Result of Sigma0 function
-   */
-  const Sigma0256 = function (x) {
-    return (S(x, 2) ^ S(x, 13) ^ S(x, 22));
-  };
-
-  /**
-   * SHA-256 Sigma1 function
-   * @param {number} x - 32-bit integer
-   * @returns {number} Result of Sigma1 function
-   */
-  const Sigma1256 = function (x) {
-    return (S(x, 6) ^ S(x, 11) ^ S(x, 25));
-  };
-
-  /**
-   * SHA-256 Gamma0 function
-   * @param {number} x - 32-bit integer
-   * @returns {number} Result of Gamma0 function
-   */
-  const Gamma0256 = function (x) {
-    return (S(x, 7) ^ S(x, 18) ^ R(x, 3));
-  };
-
-  /**
-   * SHA-256 Gamma1 function
-   * @param {number} x - 32-bit integer
-   * @returns {number} Result of Gamma1 function
-   */
-  const Gamma1256 = function (x) {
-    return (S(x, 17) ^ S(x, 19) ^ R(x, 10));
-  };
-
-  /**
-   * Core SHA-256 algorithm implementation
-   * @param {Array<number>} m - Message array of 32-bit integers
-   * @param {number} l - Message length in bits
-   * @returns {Array<number>} Hash result as array of 8 32-bit integers
-   */
-  const core_sha256 = function (m, l) {
-    const K = [0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5, 0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5, 0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3, 0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174, 0xE49B69C1, 0xEFBE4786, 0xFC19DC6, 0x240CA1CC, 0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA, 0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7, 0xC6E00BF3, 0xD5A79147, 0x6CA6351, 0x14292967, 0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13, 0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85, 0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3, 0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070, 0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5, 0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3, 0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2];
-    const HASH = [0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19];
-    const W = [64];
-    m[l >> 5] |= 0x80 << (24 - l % 32);
-    m[((l + 64 >> 9) << 4) + 15] = l;
-    for (let i = 0; i < m.length; i += 16) {
-      let a = HASH[0];
-      let b = HASH[1];
-      let c = HASH[2];
-      let d = HASH[3];
-      let e = HASH[4];
-      let f = HASH[5];
-      let g = HASH[6];
-      let h = HASH[7];
-      for (let j = 0; j < 64; j++) {
-        W[j] = j < 16 ? m[i + j] : safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
-        const T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
-        const T2 = safe_add(Sigma0256(a), Maj(a, b, c));
-        h = g;
-        g = f;
-        f = e;
-        e = safe_add(d, T1);
-        d = c;
-        c = b;
-        b = a;
-        a = safe_add(T1, T2);
-      }
-      HASH[0] = safe_add(a, HASH[0]);
-      HASH[1] = safe_add(b, HASH[1]);
-      HASH[2] = safe_add(c, HASH[2]);
-      HASH[3] = safe_add(d, HASH[3]);
-      HASH[4] = safe_add(e, HASH[4]);
-      HASH[5] = safe_add(f, HASH[5]);
-      HASH[6] = safe_add(g, HASH[6]);
-      HASH[7] = safe_add(h, HASH[7]);
-    }
-    return HASH;
-  };
-
-  /**
-   * Converts a string to an array of 32-bit integers
-   * @param {string} str - Input string
-   * @returns {Array<number>} Array of 32-bit integers
-   */
-  const str2binb = function (str) {
-    const bin = [];
-    const mask = (1 << 8) - 1;
-    for (let i = 0; i < str.length * 8; i += 8) {
-      bin[i >> 5] |= (str.charCodeAt(i / 8) & mask) << (24 - i % 32);
-    }
-    return bin;
-  };
-
-  /**
-   * Converts an array of 32-bit integers to a hexadecimal string
-   * @param {Array<number>} barr - Array of 32-bit integers
-   * @returns {string} Hexadecimal string representation
-   */
-  const binb2hex = function (barr) {
-    const hex_tab = '0123456789abcdef';
-    let str = '';
-    for (let i = 0; i < barr.length * 4; i++) {
-      str += hex_tab.charAt((barr[i >> 2] >> ((3 - i % 4) * 8 + 4)) & 0xF) + hex_tab.charAt((barr[i >> 2] >> ((3 - i % 4) * 8)) & 0xF);
-    }
-    return str;
-  };
-
-  /**
-   * Calculates SHA-256 hash of a string
-   * @param {string} string - Input string to hash
-   * @returns {string} SHA-256 hash as a hexadecimal string
-   */
-  $.sha256 = function (string) {
-    if (/[\x80-\xFF]/.test(string)) {
-      string = unescape(encodeURI(string));
-    }
-    return binb2hex(core_sha256(str2binb(string), string.length * 8));
-  };
-}());
+window.$.now = () => new Date().getTime();
 
 (function () {
   const Sbox = [99, 124, 119, 123, 242, 107, 111, 197, 48, 1, 103, 43, 254, 215, 171, 118, 202, 130, 201, 125, 250, 89, 71, 240, 173, 212, 162, 175, 156, 164, 114, 192, 183, 253, 147, 38, 54, 63, 247, 204, 52, 165, 229, 241, 113, 216, 49, 21, 4, 199, 35, 195, 24, 150, 5, 154, 7, 18, 128, 226, 235, 39, 178, 117, 9, 131, 44, 26, 27, 110, 90, 160, 82, 59, 214, 179, 41, 227, 47, 132, 83, 209, 0, 237, 32, 252, 177, 91, 106, 203, 190, 57, 74, 76, 88, 207, 208, 239, 170, 251, 67, 77, 51, 133, 69, 249, 2, 127, 80, 60, 159, 168, 81, 163, 64, 143, 146, 157, 56, 245, 188, 182, 218, 33, 16, 255, 243, 210, 205, 12, 19, 236, 95, 151, 68, 23, 196, 167, 126, 61, 100, 93, 25, 115, 96, 129, 79, 220, 34, 42, 144, 136, 70, 238, 184, 20, 222, 94, 11, 219, 224, 50, 58, 10, 73, 6, 36, 92, 194, 211, 172, 98, 145, 149, 228, 121, 231, 200, 55, 109, 141, 213, 78, 169, 108, 86, 244, 234, 101, 122, 174, 8, 186, 120, 37, 46, 28, 166, 180, 198, 232, 221, 116, 31, 75, 189, 139, 138, 112, 62, 181, 102, 72, 3, 246, 14, 97, 53, 87, 185, 134, 193, 29, 158, 225, 248, 152, 17, 105, 217, 142, 148, 155, 30, 135, 233, 206, 85, 40, 223, 140, 161, 137, 13, 191, 230, 66, 104, 65, 153, 45, 15, 176, 84, 187, 22];
@@ -350,153 +174,10 @@ $.now = () => new Date().getTime();
    * @param {Array<number>} key - 16-byte key array
    * @returns {AES128} New AES-128 instance
    */
-  $.aes128 = function (key) {
+  window.$.aes128 = function (key) {
     return new AES128(key);
   };
 }());
-
-/**
- * Modern replacement for isaac PRNG using Web Crypto API
- * Provides a compatible API with the original isaac implementation
- */
-const modernRandom = (function() {
-  // Internal state
-  let seedData = null;
-  let seedIndex = 0;
-  let seedBuffer = new Uint32Array(256);
-  
-  // Initialize with a random seed
-  seed(String(Math.random()));
-  
-  /**
-   * Generate cryptographically secure random values using Web Crypto
-   * or fall back to Math.random if not available
-   */
-  function generateRandomValues() {
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      crypto.getRandomValues(seedBuffer);
-    } else {
-      // Fallback to Math.random (less secure)
-      for (let i = 0; i < seedBuffer.length; i++) {
-        seedBuffer[i] = Math.floor(Math.random() * 0x100000000);
-      }
-    }
-    seedIndex = 0;
-  }
-  
-  /**
-   * Reset the internal state
-   */
-  function reset() {
-    seedData = null;
-    seedIndex = 0;
-    seedBuffer = new Uint32Array(256);
-    generateRandomValues();
-  }
-  
-  /**
-   * Seed the random number generator
-   * @param {number|Array|string} s - Seed value
-   */
-  function seed(s) {
-    // Reset state
-    reset();
-    
-    // Handle different seed types
-    if (typeof s === 'number') {
-      s = [s];
-    }
-    
-    if (s instanceof Array) {
-      // Use the seed array to influence our random state
-      const seedArray = new Uint32Array(s.length);
-      for (let i = 0; i < s.length; i++) {
-        seedArray[i] = typeof s[i] === 'number' ? s[i] : 0;
-      }
-      
-      // Mix the seed with our random buffer
-      for (let i = 0; i < seedBuffer.length; i++) {
-        seedBuffer[i] ^= seedArray[i % seedArray.length];
-      }
-    } else if (typeof s === 'string') {
-      // Convert string to array of character codes
-      const charCodes = [];
-      for (let i = 0; i < s.length; i++) {
-        charCodes.push(s.charCodeAt(i));
-      }
-      seed(charCodes);
-    }
-    
-    // Store the seed data for potential reuse
-    seedData = s;
-    
-    // Generate initial random values
-    generateRandomValues();
-  }
-  
-  /**
-   * Get a random 32-bit integer
-   */
-  function rand() {
-    // If we've used all our random values, generate more
-    if (seedIndex >= seedBuffer.length) {
-      generateRandomValues();
-    }
-    
-    return seedBuffer[seedIndex++];
-  }
-  
-  /**
-   * Get a random number between 0 and 1
-   */
-  function random() {
-    return rand() / 0x100000000;
-  }
-  
-  /**
-   * Compatibility function for the original isaac API
-   */
-  function prng(n) {
-    n = (n && typeof n === 'number') ? Math.abs(Math.floor(n)) : 1;
-    
-    // Just regenerate our random values
-    if (n > 0) {
-      generateRandomValues();
-    }
-  }
-  
-  /**
-   * Get/set internal state (for compatibility)
-   */
-  function internals(obj) {
-    const ret = {
-      buffer: seedBuffer.slice(),
-      index: seedIndex,
-      seed: seedData
-    };
-    
-    if (obj) {
-      if (obj.buffer) seedBuffer = obj.buffer.slice();
-      if (obj.index !== undefined) seedIndex = obj.index;
-      if (obj.seed !== undefined) seedData = obj.seed;
-    }
-    
-    return ret;
-  }
-  
-  // Return the public API
-  return {
-    reset,
-    seed,
-    prng,
-    rand,
-    random,
-    internals
-  };
-})();
-
-// For backward compatibility
-const isaac = modernRandom;
 
 const DEBUG = true;
 
@@ -857,7 +538,7 @@ const mathlib = (function () {
 
   function createMove(moveTable, size, doMove, N_MOVES) {
     N_MOVES = N_MOVES || 6;
-    if ($.isArray(doMove)) {
+    if (window.$.isArray(doMove)) {
       const cord = new coord(doMove[1], doMove[2], doMove[3]);
       doMove = doMove[0];
       for (let j = 0; j < N_MOVES; j++) {
@@ -1409,7 +1090,7 @@ const mathlib = (function () {
   }());
 
   function createPrun(prun, init, size, maxd, doMove, N_MOVES, N_POWER, N_INV) {
-    const isMoveTable = $.isArray(doMove);
+    const isMoveTable = window.$.isArray(doMove);
     N_MOVES = N_MOVES || 6;
     N_POWER = N_POWER || 3;
     N_INV = N_INV || 256;
@@ -1417,7 +1098,7 @@ const mathlib = (function () {
     for (var i = 0, len = (size + 7) >>> 3; i < len; i++) {
       prun[i] = -1;
     }
-    if (!$.isArray(init)) {
+    if (!window.$.isArray(init)) {
       init = [init];
     }
     for (var i = 0; i < init.length; i++) {
@@ -1686,8 +1367,8 @@ const mathlib = (function () {
 		}
 		var sol = sgsObj.getGen(perm);
 		var move2str = function(v) { return "URFDLB"[~~(v/3)] + " 2'"[v%3]; };
-		sol = $.map(Array.prototype.concat.apply([], sol).reverse(), move2str).join(' ');
-		console.log($.map(initMv.reverse(), move2str).join(' '), '\n', sol);
+		sol = window.$.map(Array.prototype.concat.apply([], sol).reverse(), move2str).join(' ');
+		console.log(window.$.map(initMv.reverse(), move2str).join(' '), '\n', sol);
 
 		var sgs0, sgs1, sgs01;
 		for (var r = 0; r < 100; r++) {
@@ -2087,8 +1768,8 @@ const GiikerCube = function () {
   }
 
   const GanCube = (function () {
-    const callback = $.noop;
-    const evtCallback = $.noop;
+    const callback = window.$.noop;
+    const evtCallback = window.$.noop;
 
     let _gatt;
     let _service_data;
@@ -2290,7 +1971,7 @@ const GiikerCube = function () {
       }
       const keyiv = getKeyV2(value, ver);
       DEBUG && console.log('[gancube] ver=', ver, ' key=', JSON.stringify(keyiv));
-      decoder = $.aes128(keyiv[0]);
+      decoder = window.$.aes128(keyiv[0]);
       decoder.iv = keyiv[1];
     }
 
@@ -2465,7 +2146,7 @@ const GiikerCube = function () {
     let batteryLevel = 100;
 
     function initCubeState() {
-      const locTime = $.now();
+      const locTime = window.$.now();
       DEBUG && console.log('[gancube]', 'init cube state');
       callback(latestFacelet, [], [null, locTime], deviceName);
       prevCubie.fromFacelet(latestFacelet);
@@ -2543,7 +2224,7 @@ const GiikerCube = function () {
       }
       return _chrct_f5.readValue().then((value) => {
         value = decode(value);
-        const locTime = $.now();
+        const locTime = window.$.now();
         moveCnt = value[12];
         if (moveCnt == prevMoveCnt) {
           return;
@@ -2604,7 +2285,7 @@ const GiikerCube = function () {
     }
 
     function parseV2Data(value) {
-      const locTime = $.now();
+      const locTime = window.$.now();
       // DEBUG && console.log('[gancube]', 'dec v2', value);
       value = decode(value);
       for (var i = 0; i < value.length; i++) {
@@ -2734,7 +2415,7 @@ const GiikerCube = function () {
       req[4] = numberOfMoves;
       req[5] = 0;
       // We can safely suppress and ignore possible GATT write errors, v3requestMoveHistory command is automatically retried on each move event if needed
-      return v3sendRequest(req).catch($.noop);
+      return v3sendRequest(req).catch(window.$.noop);
     }
 
     function v3EvictMoveBuffer(reqLostMoves) {
@@ -2775,7 +2456,7 @@ const GiikerCube = function () {
     }
 
     function parseV3Data(value) {
-      const locTime = $.now();
+      const locTime = window.$.now();
       DEBUG && console.log('[gancube]', 'v3 raw message', value);
       value = decode(value);
       for (var i = 0; i < value.length; i++) {
@@ -2873,12 +2554,12 @@ const GiikerCube = function () {
       let result = Promise.resolve();
       if (_chrct_v2read) {
         _chrct_v2read.removeEventListener('characteristicvaluechanged', onStateChangedV2);
-        result = _chrct_v2read.stopNotifications().catch($.noop);
+        result = _chrct_v2read.stopNotifications().catch(window.$.noop);
         _chrct_v2read = null;
       }
       if (_chrct_v3read) {
         _chrct_v3read.removeEventListener('characteristicvaluechanged', onStateChangedV3);
-        result = _chrct_v3read.stopNotifications().catch($.noop);
+        result = _chrct_v3read.stopNotifications().catch(window.$.noop);
         _chrct_v3read = null;
       }
       _service_data = null;
