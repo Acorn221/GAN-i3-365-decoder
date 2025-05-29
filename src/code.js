@@ -3407,4 +3407,4 @@ const GiikerCube = function () {
 };
 
 // Export GiikerCube to the global scope
-window.GiikerCube = GiikerCube();
+export const giikerCube = GiikerCube();
