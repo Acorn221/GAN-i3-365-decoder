@@ -2,47 +2,114 @@
 import * as LZString from 'lz-string';
 
 const $ = {};
+/**
+ * Empty function that does nothing
+ * @returns {void}
+ */
 $.noop = () => { };
+
+/**
+ * Returns the current timestamp in milliseconds
+ * @returns {number} Current timestamp in milliseconds
+ */
 $.now = () => new Date().getTime();
 (function () {
+  /**
+   * Safely adds two 32-bit integers without overflow
+   * @param {number} x - First 32-bit integer
+   * @param {number} y - Second 32-bit integer
+   * @returns {number} Sum of x and y as a 32-bit integer
+   */
   const safe_add = function (x, y) {
     const lsw = (x & 0xFFFF) + (y & 0xFFFF);
     const msw = (x >> 16) + (y >> 16) + (lsw >> 16);
     return (msw << 16) | (lsw & 0xFFFF);
   };
 
+  /**
+   * Bitwise rotate 32-bit number to the right
+   * @param {number} X - 32-bit integer
+   * @param {number} n - Number of bits to rotate
+   * @returns {number} Rotated result
+   */
   const S = function (X, n) {
     return (X >>> n) | (X << (32 - n));
   };
 
+  /**
+   * Bitwise shift 32-bit number to the right
+   * @param {number} X - 32-bit integer
+   * @param {number} n - Number of bits to shift
+   * @returns {number} Shifted result
+   */
   const R = function (X, n) {
     return (X >>> n);
   };
 
+  /**
+   * SHA-256 Ch function
+   * @param {number} x - 32-bit integer
+   * @param {number} y - 32-bit integer
+   * @param {number} z - 32-bit integer
+   * @returns {number} Result of Ch function
+   */
   const Ch = function (x, y, z) {
     return ((x & y) ^ ((~x) & z));
   };
 
+  /**
+   * SHA-256 Maj function
+   * @param {number} x - 32-bit integer
+   * @param {number} y - 32-bit integer
+   * @param {number} z - 32-bit integer
+   * @returns {number} Result of Maj function
+   */
   const Maj = function (x, y, z) {
     return ((x & y) ^ (x & z) ^ (y & z));
   };
 
+  /**
+   * SHA-256 Sigma0 function
+   * @param {number} x - 32-bit integer
+   * @returns {number} Result of Sigma0 function
+   */
   const Sigma0256 = function (x) {
     return (S(x, 2) ^ S(x, 13) ^ S(x, 22));
   };
 
+  /**
+   * SHA-256 Sigma1 function
+   * @param {number} x - 32-bit integer
+   * @returns {number} Result of Sigma1 function
+   */
   const Sigma1256 = function (x) {
     return (S(x, 6) ^ S(x, 11) ^ S(x, 25));
   };
 
+  /**
+   * SHA-256 Gamma0 function
+   * @param {number} x - 32-bit integer
+   * @returns {number} Result of Gamma0 function
+   */
   const Gamma0256 = function (x) {
     return (S(x, 7) ^ S(x, 18) ^ R(x, 3));
   };
 
+  /**
+   * SHA-256 Gamma1 function
+   * @param {number} x - 32-bit integer
+   * @returns {number} Result of Gamma1 function
+   */
   const Gamma1256 = function (x) {
     return (S(x, 17) ^ S(x, 19) ^ R(x, 10));
   };
 
+  /**
+   * Core SHA-256 algorithm implementation
+   * @param {Array<number>} m - Message array of 32-bit integers
+   * @param {number} l - Message length in bits
+   * @returns {Array<number>} Hash result as array of 8 32-bit integers
+   */
   const core_sha256 = function (m, l) {
     const K = [0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5, 0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5, 0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3, 0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174, 0xE49B69C1, 0xEFBE4786, 0xFC19DC6, 0x240CA1CC, 0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA, 0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7, 0xC6E00BF3, 0xD5A79147, 0x6CA6351, 0x14292967, 0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13, 0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85, 0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3, 0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070, 0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5, 0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3, 0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2];
     const HASH = [0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19];
@@ -83,6 +150,11 @@ $.now = () => new Date().getTime();
     return HASH;
   };
 
+  /**
+   * Converts a string to an array of 32-bit integers
+   * @param {string} str - Input string
+   * @returns {Array<number>} Array of 32-bit integers
+   */
   const str2binb = function (str) {
     const bin = [];
     const mask = (1 << 8) - 1;
@@ -92,6 +164,11 @@ $.now = () => new Date().getTime();
     return bin;
   };
 
+  /**
+   * Converts an array of 32-bit integers to a hexadecimal string
+   * @param {Array<number>} barr - Array of 32-bit integers
+   * @returns {string} Hexadecimal string representation
+   */
   const binb2hex = function (barr) {
     const hex_tab = '0123456789abcdef';
     let str = '';
@@ -101,6 +178,11 @@ $.now = () => new Date().getTime();
     return str;
   };
 
+  /**
+   * Calculates SHA-256 hash of a string
+   * @param {string} string - Input string to hash
+   * @returns {string} SHA-256 hash as a hexadecimal string
+   */
   $.sha256 = function (string) {
     if (/[\x80-\xFF]/.test(string)) {
       string = unescape(encodeURI(string));
@@ -115,12 +197,24 @@ $.now = () => new Date().getTime();
   const ShiftTabI = [0, 13, 10, 7, 4, 1, 14, 11, 8, 5, 2, 15, 12, 9, 6, 3];
   const xtime = [];
 
+  /**
+   * Adds a round key to the state in AES
+   * @param {Array<number>} state - Current state array (16 bytes)
+   * @param {Array<number>} rkey - Round key array (16 bytes)
+   * @returns {void}
+   */
   function addRoundKey(state, rkey) {
     for (let i = 0; i < 16; i++) {
       state[i] ^= rkey[i];
     }
   }
 
+  /**
+   * Performs inverse shift rows, inverse sub bytes, and add round key operations
+   * @param {Array<number>} state - Current state array (16 bytes)
+   * @param {Array<number>} rkey - Round key array (16 bytes)
+   * @returns {void}
+   */
   function shiftSubAdd(state, rkey) {
     const state0 = state.slice();
     for (let i = 0; i < 16; i++) {
@@ -128,6 +222,12 @@ $.now = () => new Date().getTime();
     }
   }
 
+  /**
+   * Performs add round key, sub bytes, and shift rows operations
+   * @param {Array<number>} state - Current state array (16 bytes)
+   * @param {Array<number>} rkey - Round key array (16 bytes)
+   * @returns {void}
+   */
   function shiftSubAddI(state, rkey) {
     const state0 = state.slice();
     for (let i = 0; i < 16; i++) {
@@ -135,6 +235,11 @@ $.now = () => new Date().getTime();
     }
   }
 
+  /**
+   * Performs the mix columns operation in AES
+   * @param {Array<number>} state - Current state array (16 bytes)
+   * @returns {void}
+   */
   function mixColumns(state) {
     for (let i = 12; i >= 0; i -= 4) {
       const s0 = state[i + 0];
@@ -149,6 +254,11 @@ $.now = () => new Date().getTime();
     }
   }
 
+  /**
+   * Performs the inverse mix columns operation in AES
+   * @param {Array<number>} state - Current state array (16 bytes)
+   * @returns {void}
+   */
   function mixColumnsInv(state) {
     for (let i = 0; i < 16; i += 4) {
       const s0 = state[i + 0];
@@ -166,6 +276,10 @@ $.now = () => new Date().getTime();
     }
   }
 
+  /**
+   * Initializes the AES tables if not already initialized
+   * @returns {void}
+   */
   function init() {
     if (xtime.length != 0) {
       return;
@@ -179,6 +293,11 @@ $.now = () => new Date().getTime();
     }
   }
 
+  /**
+   * AES-128 constructor
+   * @param {Array<number>} key - 16-byte key array
+   * @constructor
+   */
   function AES128(key) {
     init();
     const exKey = key.slice();
@@ -196,6 +315,11 @@ $.now = () => new Date().getTime();
     this.key = exKey;
   }
 
+  /**
+   * Decrypts a 16-byte block using AES-128
+   * @param {Array<number>} block - 16-byte block to decrypt
+   * @returns {Array<number>} Decrypted block
+   */
   AES128.prototype.decrypt = function (block) {
     addRoundKey(block, this.key.slice(160, 176));
     for (let i = 144; i >= 16; i -= 16) {
@@ -206,6 +330,11 @@ $.now = () => new Date().getTime();
     return block;
   };
 
+  /**
+   * Encrypts a 16-byte block using AES-128
+   * @param {Array<number>} block - 16-byte block to encrypt
+   * @returns {Array<number>} Encrypted block
+   */
   AES128.prototype.encrypt = function (block) {
     shiftSubAddI(block, this.key.slice(0, 16));
     for (let i = 16; i < 160; i += 16) {
@@ -216,6 +345,11 @@ $.now = () => new Date().getTime();
     return block;
   };
 
+  /**
+   * Creates a new AES-128 instance with the given key
+   * @param {Array<number>} key - 16-byte key array
+   * @returns {AES128} New AES-128 instance
+   */
   $.aes128 = function (key) {
     return new AES128(key);
   };
@@ -383,6 +517,16 @@ const mathlib = (function () {
     }
   }
 
+  /**
+   * Performs a 4-cycle permutation with orientation on an array
+   * @param {Array<number>} arr - Array to modify
+   * @param {number} a - First index
+   * @param {number} b - Second index
+   * @param {number} c - Third index
+   * @param {number} d - Fourth index
+   * @param {number} ori - Orientation value to XOR
+   * @returns {void}
+   */
   function circleOri(arr, a, b, c, d, ori) {
     const temp = arr[a];
     arr[a] = arr[d] ^ ori;
@@ -391,6 +535,12 @@ const mathlib = (function () {
     arr[b] = temp ^ ori;
   }
 
+  /**
+   * Performs a cycle permutation on an array
+   * @param {Array<number>} arr - Array to modify
+   * @param {...number} indices - Indices to cycle
+   * @returns {function} The circle function for chaining
+   */
   function circle(arr) {
     const length = arguments.length - 1;
     const temp = arr[arguments[length]];
@@ -405,6 +555,14 @@ const mathlib = (function () {
   // pow: 1, 2, 3, ...
   // ori: ori1, ori2, ..., orin, base
   // arr[perm[idx2]] = arr[perm[idx1]] + ori[idx2] - ori[idx1] + base
+  /**
+   * Performs a general cycle permutation with orientation
+   * @param {Array<number>} arr - Array to modify
+   * @param {Array<number>} perm - Permutation indices
+   * @param {number} pow - Power of the permutation (default: 1)
+   * @param {Array<number>} ori - Orientation values (optional)
+   * @returns {function} The acycle function for chaining
+   */
   function acycle(arr, perm, pow, ori) {
     pow = pow || 1;
     const plen = perm.length;
@@ -422,10 +580,24 @@ const mathlib = (function () {
     return acycle;
   }
 
+  /**
+   * Gets a pruning value from a compressed table
+   * @param {Array<number>} table - Pruning table
+   * @param {number} index - Index to look up
+   * @returns {number} Pruning value (0-15)
+   */
   function getPruning(table, index) {
     return table[index >> 3] >> ((index & 7) << 2) & 15;
   }
 
+  /**
+   * Sets a permutation based on an index
+   * @param {Array<number>} arr - Array to modify
+   * @param {number} idx - Index of the permutation
+   * @param {number} n - Size of the permutation
+   * @param {number} even - If negative, ensures even parity
+   * @returns {Array<number>} Modified array
+   */
   function setNPerm(arr, idx, n, even) {
     let prt = 0;
     if (even < 0) {
@@ -477,6 +649,13 @@ const mathlib = (function () {
     return arr;
   }
 
+  /**
+   * Gets the index of a permutation
+   * @param {Array<number>} arr - Permutation array
+   * @param {number} n - Size of the permutation (default: arr.length)
+   * @param {number} even - If negative, returns index for even parity permutations
+   * @returns {number} Index of the permutation
+   */
   function getNPerm(arr, n, even) {
     n = n || arr.length;
     let idx = 0;
@@ -506,6 +685,12 @@ const mathlib = (function () {
     return even < 0 ? (idx >> 1) : idx;
   }
 
+  /**
+   * Gets the parity of a permutation index
+   * @param {number} idx - Index of the permutation
+   * @param {number} n - Size of the permutation
+   * @returns {number} Parity (0 or 1)
+   */
   function getNParity(idx, n) {
     let i; let
       p;
@@ -517,6 +702,13 @@ const mathlib = (function () {
     return p & 1;
   }
 
+  /**
+   * Gets the index of an orientation
+   * @param {Array<number>} arr - Orientation array
+   * @param {number} n - Size of the orientation
+   * @param {number} evenbase - Base for orientation values, if negative, first element is computed
+   * @returns {number} Index of the orientation
+   */
   function getNOri(arr, n, evenbase) {
     const base = Math.abs(evenbase);
     let idx = evenbase < 0 ? 0 : arr[0] % base;
