@@ -1,6 +1,6 @@
 import React from 'react';
 import { XyzTransitionGroup } from '@animxyz/react';
-
+import { giikerCube } from './code.js';
 import '@/index.css';
 
 const App = () => {
@@ -8,13 +8,14 @@ const App = () => {
   const [showCount, setShowCount] = React.useState(true);
 
   const increment = () => {
-    setShowCount(false);
-    setTimeout(() => {
-      requestAnimationFrame(() => {
-        setShowCount(true);
-        setCount(count + 1);
-      });
-    }, 150);
+    giikerCube.init();
+    // setShowCount(false);
+    // setTimeout(() => {
+    //   requestAnimationFrame(() => {
+    //     setShowCount(true);
+    //     setCount(count + 1);
+    //   });
+    // }, 150);
   };
 
   return (

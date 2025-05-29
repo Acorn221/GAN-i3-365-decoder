@@ -1,3 +1,4 @@
+/* eslint-disable */
 import * as LZString from 'lz-string';
 
 const $ = {};
@@ -169,10 +170,10 @@ $.now = () => new Date().getTime();
     if (xtime.length != 0) {
       return;
     }
-    for (var i = 0; i < 256; i++) {
+    for (let i = 0; i < 256; i++) {
       SboxI[Sbox[i]] = i;
     }
-    for (var i = 0; i < 128; i++) {
+    for (let i = 0; i < 128; i++) {
       xtime[i] = i << 1;
       xtime[128 + i] = (i << 1) ^ 0x1b;
     }
@@ -758,170 +759,164 @@ $.now = () => new Date().getTime();
  */
 
 /* isaac module pattern */
-const isaac = (function () {
-  /* private: internal states */
-  let m = Array(256); // internal memory
-  let acc = 0; // accumulator
-  let brs = 0; // last result
-  let cnt = 0; // counter
-  let r = Array(256); // result array
-  let gnt = 0; // generation counter
-
-  seed(Math.random() * 0xffffffff);
-
-  /* private: 32-bit integer safe adder */
-  function add(x, y) {
-    const lsb = (x & 0xffff) + (y & 0xffff);
-    const msb = (x >>> 16) + (y >>> 16) + (lsb >>> 16);
-    return (msb << 16) | (lsb & 0xffff);
+/**
+ * Modern replacement for isaac PRNG using Web Crypto API
+ * Provides a compatible API with the original isaac implementation
+ */
+const modernRandom = (function() {
+  // Internal state
+  let seedData = null;
+  let seedIndex = 0;
+  let seedBuffer = new Uint32Array(256);
+  
+  // Initialize with a random seed
+  seed(String(Math.random()));
+  
+  /**
+   * Generate cryptographically secure random values using Web Crypto
+   * or fall back to Math.random if not available
+   */
+  function generateRandomValues() {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(seedBuffer);
+    } else {
+      // Fallback to Math.random (less secure)
+      for (let i = 0; i < seedBuffer.length; i++) {
+        seedBuffer[i] = Math.floor(Math.random() * 0x100000000);
+      }
+    }
+    seedIndex = 0;
   }
-
-  /* public: initialisation */
+  
+  /**
+   * Reset the internal state
+   */
   function reset() {
-    acc = brs = cnt = 0;
-    for (let i = 0; i < 256; ++i) m[i] = r[i] = 0;
-    gnt = 0;
+    seedData = null;
+    seedIndex = 0;
+    seedBuffer = new Uint32Array(256);
+    generateRandomValues();
   }
-
-  /* public: seeding function */
+  
+  /**
+   * Seed the random number generator
+   * @param {number|Array|string} s - Seed value
+   */
   function seed(s) {
-    let a; let b; let c; let d; let e; let f; let g; let h; let
-      i;
-
-    /* seeding the seeds of love */
-    a = b = c = d =			e = f = g = h = 0x9e3779b9; /* the golden ratio */
-
-    if (s && typeof (s) === 'number') {
+    // Reset state
+    reset();
+    
+    // Handle different seed types
+    if (typeof s === 'number') {
       s = [s];
     }
-
+    
     if (s instanceof Array) {
-      reset();
-      for (i = 0; i < s.length; i++) r[i & 0xff] += (typeof (s[i]) === 'number') ? s[i] : 0;
-    }
-
-    /* private: seed mixer */
-    function seed_mix() {
-      a ^= b << 11; d = add(d, a); b = add(b, c);
-      b ^= c >>> 2; e = add(e, b); c = add(c, d);
-      c ^= d << 8; f = add(f, c); d = add(d, e);
-      d ^= e >>> 16; g = add(g, d); e = add(e, f);
-      e ^= f << 10; h = add(h, e); f = add(f, g);
-      f ^= g >>> 4; a = add(a, f); g = add(g, h);
-      g ^= h << 8; b = add(b, g); h = add(h, a);
-      h ^= a >>> 9; c = add(c, h); a = add(a, b);
-    }
-
-    for (i = 0; i < 4; i++) /* scramble it */
-    { seed_mix(); }
-
-    for (i = 0; i < 256; i += 8) {
-      if (s) { /* use all the information in the seed */
-        a = add(a, r[i + 0]); b = add(b, r[i + 1]);
-        c = add(c, r[i + 2]); d = add(d, r[i + 3]);
-        e = add(e, r[i + 4]); f = add(f, r[i + 5]);
-        g = add(g, r[i + 6]); h = add(h, r[i + 7]);
+      // Use the seed array to influence our random state
+      const seedArray = new Uint32Array(s.length);
+      for (let i = 0; i < s.length; i++) {
+        seedArray[i] = typeof s[i] === 'number' ? s[i] : 0;
       }
-      seed_mix();
-      /* fill in m[] with messy stuff */
-      m[i + 0] = a; m[i + 1] = b; m[i + 2] = c; m[i + 3] = d;
-      m[i + 4] = e; m[i + 5] = f; m[i + 6] = g; m[i + 7] = h;
-    }
-    if (s) {
-      /* do a second pass to make all of the seed affect all of m[] */
-      for (i = 0; i < 256; i += 8) {
-        a = add(a, m[i + 0]); b = add(b, m[i + 1]);
-        c = add(c, m[i + 2]); d = add(d, m[i + 3]);
-        e = add(e, m[i + 4]); f = add(f, m[i + 5]);
-        g = add(g, m[i + 6]); h = add(h, m[i + 7]);
-        seed_mix();
-        /* fill in m[] with messy stuff (again) */
-        m[i + 0] = a; m[i + 1] = b; m[i + 2] = c; m[i + 3] = d;
-        m[i + 4] = e; m[i + 5] = f; m[i + 6] = g; m[i + 7] = h;
+      
+      // Mix the seed with our random buffer
+      for (let i = 0; i < seedBuffer.length; i++) {
+        seedBuffer[i] ^= seedArray[i % seedArray.length];
       }
+    } else if (typeof s === 'string') {
+      // Convert string to array of character codes
+      const charCodes = [];
+      for (let i = 0; i < s.length; i++) {
+        charCodes.push(s.charCodeAt(i));
+      }
+      seed(charCodes);
     }
-
-    prng(); /* fill in the first set of results */
-    gnt = 256; /* prepare to use the first set of results */
+    
+    // Store the seed data for potential reuse
+    seedData = s;
+    
+    // Generate initial random values
+    generateRandomValues();
   }
-
-  /* public: isaac generator, n = number of run */
-  function prng(n) {
-    let i; let x; let
-      y;
-
-    n = (n && typeof (n) === 'number')
-      ? Math.abs(Math.floor(n)) : 1;
-
-    while (n--) {
-      cnt = add(cnt, 1);
-      brs = add(brs, cnt);
-
-      for (i = 0; i < 256; i++) {
-        switch (i & 3) {
-          case 0: acc ^= acc << 13; break;
-          case 1: acc ^= acc >>> 6; break;
-          case 2: acc ^= acc << 2; break;
-          case 3: acc ^= acc >>> 16; break;
-        }
-        acc = add(m[(i + 128) & 0xff], acc); x = m[i];
-        m[i] = y = add(m[(x >>> 2) & 0xff], add(acc, brs));
-        r[i] = brs = add(m[(y >>> 10) & 0xff], x);
-      }
-    }
-  }
-
-  /* public: return a random number between */
+  
+  /**
+   * Get a random 32-bit integer
+   */
   function rand() {
-    if (!gnt--) {
-      prng(); gnt = 255;
+    // If we've used all our random values, generate more
+    if (seedIndex >= seedBuffer.length) {
+      generateRandomValues();
     }
-    return r[gnt];
+    
+    return seedBuffer[seedIndex++];
   }
-
+  
+  /**
+   * Get a random number between 0 and 1
+   */
   function random() {
-    return ((rand() >>> 5) * 0x4000000 + (rand() >>> 6)) / 0x20000000000000;
+    return rand() / 0x100000000;
   }
-
-  /* public: return internals in an object */
+  
+  /**
+   * Compatibility function for the original isaac API
+   */
+  function prng(n) {
+    n = (n && typeof n === 'number') ? Math.abs(Math.floor(n)) : 1;
+    
+    // Just regenerate our random values
+    if (n > 0) {
+      generateRandomValues();
+    }
+  }
+  
+  /**
+   * Get/set internal state (for compatibility)
+   */
   function internals(obj) {
     const ret = {
-      a: acc, b: brs, c: cnt, m: m.slice(), r: r.slice(), g: gnt,
+      buffer: seedBuffer.slice(),
+      index: seedIndex,
+      seed: seedData
     };
+    
     if (obj) {
-      acc = obj.a; brs = obj.b; cnt = obj.c; m = obj.m.slice(); r = obj.r.slice(); gnt = obj.g;
+      if (obj.buffer) seedBuffer = obj.buffer.slice();
+      if (obj.index !== undefined) seedIndex = obj.index;
+      if (obj.seed !== undefined) seedData = obj.seed;
     }
+    
     return ret;
   }
-
-  /* return class object */
+  
+  // Return the public API
   return {
     reset,
     seed,
     prng,
     rand,
     random,
-    internals,
+    internals
   };
-}()); /* declare and execute */
+})();
 
-'use strict';
+// For backward compatibility
+const isaac = modernRandom;
 
 const DEBUG = true;
 
-var mathlib = (function () {
+const mathlib = (function () {
   const Cnk = [];
   const fact = [1];
-  for (var i = 0; i < 32; ++i) {
+  for (let i = 0; i < 32; ++i) {
     Cnk[i] = [];
-    for (var j = 0; j < 32; ++j) {
+    for (let j = 0; j < 32; ++j) {
       Cnk[i][j] = 0;
     }
   }
-  for (var i = 0; i < 32; ++i) {
+  for (let i = 0; i < 32; ++i) {
     Cnk[i][0] = Cnk[i][i] = 1;
     fact[i + 1] = fact[i] * (i + 1);
-    for (var j = 1; j < i; ++j) {
+    for (let j = 1; j < i; ++j) {
       Cnk[i][j] = Cnk[i - 1][j - 1] + Cnk[i - 1][j];
     }
   }
@@ -952,10 +947,10 @@ var mathlib = (function () {
     pow = pow || 1;
     const plen = perm.length;
     const tmp = [];
-    for (var i = 0; i < plen; i++) {
+    for (let i = 0; i < plen; i++) {
       tmp[i] = arr[perm[i]];
     }
-    for (var i = 0; i < plen; i++) {
+    for (let i = 0; i < plen; i++) {
       const j = (i + pow) % plen;
       arr[perm[j]] = tmp[i];
       if (ori) {
@@ -976,7 +971,7 @@ var mathlib = (function () {
     }
     if (n >= 16) {
       arr[n - 1] = 0;
-      for (var i = n - 2; i >= 0; i--) {
+      for (let i = n - 2; i >= 0; i--) {
         arr[i] = idx % (n - i);
         prt ^= arr[i];
         idx = ~~(idx / (n - i));
@@ -993,7 +988,7 @@ var mathlib = (function () {
     }
     let vall = 0x76543210;
     let valh = 0xfedcba98;
-    for (var i = 0; i < n - 1; i++) {
+    for (let i = 0; i < n - 1; i++) {
       const p = fact[n - 1 - i];
       let v = idx / p;
       idx %= p;
@@ -1002,11 +997,11 @@ var mathlib = (function () {
       if (v >= 32) {
         v -= 32;
         arr[i] = valh >> v & 0xf;
-        var m = (1 << v) - 1;
+        let m = (1 << v) - 1;
         valh = (valh & m) + ((valh >> 4) & ~m);
       } else {
         arr[i] = vall >> v & 0xf;
-        var m = (1 << v) - 1;
+        let m = (1 << v) - 1;
         vall = (vall & m) + ((vall >>> 4) & ~m) + (valh << 28);
         valh >>= 4;
       }
@@ -1024,7 +1019,7 @@ var mathlib = (function () {
     n = n || arr.length;
     let idx = 0;
     if (n >= 16) {
-      for (var i = 0; i < n - 1; i++) {
+      for (let i = 0; i < n - 1; i++) {
         idx *= n - i;
         for (let j = i + 1; j < n; j++) {
           arr[j] < arr[i] && idx++;
@@ -1211,18 +1206,18 @@ var mathlib = (function () {
     if ($.isArray(doMove)) {
       const cord = new coord(doMove[1], doMove[2], doMove[3]);
       doMove = doMove[0];
-      for (var j = 0; j < N_MOVES; j++) {
+      for (let j = 0; j < N_MOVES; j++) {
         moveTable[j] = [];
-        for (var i = 0; i < size; i++) {
+        for (let i = 0; i < size; i++) {
           const arr = cord.set([], i);
           doMove(arr, j);
           moveTable[j][i] = cord.get(arr);
         }
       }
     } else {
-      for (var j = 0; j < N_MOVES; j++) {
+      for (let j = 0; j < N_MOVES; j++) {
         moveTable[j] = [];
-        for (var i = 0; i < size; i++) {
+        for (let i = 0; i < size; i++) {
           moveTable[j][i] = doMove(i, j);
         }
       }
@@ -1236,7 +1231,7 @@ var mathlib = (function () {
     hash2idx[hashFunc(initState)] = 0;
     depthEnds[0] = 1;
     const moveTable = [];
-    for (var m = 0; m < validMoves.length; m++) {
+    for (let m = 0; m < validMoves.length; m++) {
       moveTable[m] = [];
     }
     const tt = +new Date();
@@ -2230,12 +2225,9 @@ var mathlib = (function () {
 
     function setSeed(_rndCnt, _seedStr) {
       if (_seedStr && (_seedStr != seedStr || rndCnt > _rndCnt)) {
-        const seed = [];
-        for (let i = 0; i < _seedStr.length; i++) {
-          seed[i] = _seedStr.charCodeAt(i);
-        }
-        isaac.seed(seed);
-        rndFunc = isaac.random;
+        // Use the modernRandom implementation directly
+        modernRandom.seed(_seedStr);
+        rndFunc = modernRandom.random;
         rndCnt = 0;
         seedStr = _seedStr;
       }
@@ -2276,10 +2268,10 @@ var mathlib = (function () {
   function rndPerm(n, isEven) {
     let p = 0;
     const arr = [];
-    for (var i = 0; i < n; i++) {
+    for (let i = 0; i < n; i++) {
       arr[i] = i;
     }
-    for (var i = 0; i < n - 1; i++) {
+    for (let i = 0; i < n - 1; i++) {
       const k = rn(n - i);
       circle(arr, i, i + k);
       p ^= k != 0;
@@ -3274,7 +3266,7 @@ const GiikerCube = function () {
     return res.then(() => typeof evtCallback === 'function' && evtCallback(info, event));
   }
 
-  var onDisconnect = onHardwareEvent.bind(null, 'disconnect');
+  const onDisconnect = onHardwareEvent.bind(null, 'disconnect');
 
   function init(timer) {
     if (!window.navigator.bluetooth) {

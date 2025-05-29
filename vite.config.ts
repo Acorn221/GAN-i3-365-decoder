@@ -13,5 +13,7 @@ export default defineConfig({
   },
   server: {
     host: true,
+    port: 3000,
+    allowedHosts: ['deathmail-mac.j4a.uk'],
   },
 });
