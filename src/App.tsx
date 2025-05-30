@@ -26,10 +26,10 @@ const App = () => {
 
   const convertCubeFormat = useCallback((cubeString: string): string => {
     const colorMap: Record<string, string> = {
-      U: 'y', // Up face = yellow
+      U: 'w', // Up face = white
       R: 'r', // Right face = red
       F: 'b', // Front face = blue
-      D: 'w', // Down face = white
+      D: 'y', // Down face = yellow
       L: 'o', // Left face = orange
       B: 'g', // Back face = green
     };
@@ -140,9 +140,9 @@ const App = () => {
       <div className="bg-white m-auto p-10 rounded-xl w-3/4 md:w-1/2 text-center">
         <div className="underline text-5xl mb-4">GAN 356 i3 3x3</div>
         <div className="text-2xl mb-6">Bluetooth Smart Cube (Magnetic)</div>
-        <div className="flex justify-center m-5">
+        <div className="flex justify-center m-5 gap-2">
           <button
-            className={`text-2xl m-auto w-full p-5 rounded-2xl flex ${
+            className={`text-2xl m-auto w-full p-5 rounded-2xl flex flex-1 ${
               isConnected
                 ? 'bg-red-200 hover:bg-red-300'
                 : 'bg-slate-200 hover:bg-slate-300'
@@ -159,12 +159,9 @@ const App = () => {
               {isConnected ? 'Disconnect Cube' : 'Connect Cube'}
             </div>
           </button>
-        </div>
-
-        {isConnected && (
-          <div className="flex justify-center m-5">
+          {isConnected && (
             <button
-              className="text-2xl m-auto w-full p-5 rounded-2xl flex bg-blue-200 hover:bg-blue-300"
+              className="text-2xl m-auto flex-1 p-5 rounded-2xl flex bg-blue-200 hover:bg-blue-300"
               onClick={() => {
                 // Set last move to None after reset
                 setLastMove('None');
@@ -196,8 +193,9 @@ const App = () => {
                 Reset Cube Position
               </div>
             </button>
-          </div>
-        )}
+          )}
+        </div>
+
         <div className="flex w-full cube-container">
           <div ref={frontCubeRef as any} className="flex-1" />
           <div ref={backCubeRef as any} className="flex-1" />
