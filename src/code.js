@@ -235,7 +235,6 @@ const GanCube = (function () {
   let _device = null;
 
   const callback = window.$.noop;
-  const evtCallback = window.$.noop;
 
   let _gatt;
   let _service_data;
@@ -436,7 +435,7 @@ const GanCube = (function () {
    * @param {number} ver - Version number
    * @returns {void}
    */
-  function v2initKey(forcePrompt, isWrongKey, ver) {
+  function v2initKey(forcePrompt, ver) {
     if (deviceMac) {
       var savedMacMap = JSON.parse(kernel.getProp('giiMacMap', '{}'));
       const prevMac = savedMacMap[deviceName];
@@ -456,7 +455,6 @@ const GanCube = (function () {
       }
       const m = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i.exec(mac);
       if (!m) {
-        logohint.push(LGHINT_BTINVMAC);
         decoder = null;
         return;
       }
@@ -551,7 +549,7 @@ const GanCube = (function () {
   function v2init(ver) {
     DEBUG && console.log('[gancube] v2init start');
     keyCheck = 0;
-    v2initKey(true, false, ver);
+    v2initKey(true, ver);
     return _service_v2data.getCharacteristics().then((chrcts) => {
       DEBUG && console.log('[gancube] v2init find chrcts', chrcts);
       for (let i = 0; i < chrcts.length; i++) {
@@ -576,91 +574,6 @@ const GanCube = (function () {
       .then(() => v2requestHardwareInfo())
       .then(() => v2requestFacelets())
       .then(() => v2requestBattery());
-  }
-
-  /**
-   * Sends a request to the cube using V3 protocol
-   * @param {Array<number>} req - Request data to send
-   * @returns {Promise|undefined} Promise from writeValue or undefined if characteristic not found
-   */
-  function v3sendRequest(req) {
-    if (!_chrct_v3write) {
-      DEBUG && console.log('[gancube] v3sendRequest cannot find v3write chrct');
-      return;
-    }
-    const encodedReq = encode(req.slice());
-    DEBUG && console.log('[gancube] v3sendRequest', req, encodedReq);
-    return _chrct_v3write.writeValue(new Uint8Array(encodedReq).buffer);
-  }
-
-  /**
-   * Sends a simple request with just an opcode using V3 protocol
-   * @param {number} opcode - Operation code to send
-   * @returns {Promise|undefined} Promise from v3sendRequest
-   */
-  function v3sendSimpleRequest(opcode) {
-    const req = mathlib.valuedArray(16, 0);
-    req[0] = 0x68;
-    req[1] = opcode;
-    return v3sendRequest(req);
-  }
-
-  /**
-   * Requests facelet state from the cube using V3 protocol
-   * @returns {Promise|undefined} Promise from v3sendSimpleRequest
-   */
-  function v3requestFacelets() {
-    return v3sendSimpleRequest(1);
-  }
-
-  /**
-   * Requests battery level from the cube using V3 protocol
-   * @returns {Promise|undefined} Promise from v3sendSimpleRequest
-   */
-  function v3requestBattery() {
-    return v3sendSimpleRequest(7);
-  }
-
-  /**
-   * Requests hardware information from the cube using V3 protocol
-   * @returns {Promise|undefined} Promise from v3sendSimpleRequest
-   */
-  function v3requestHardwareInfo() {
-    return v3sendSimpleRequest(4);
-  }
-
-  /**
-   * Initializes the V3 protocol communication with the cube
-   * @returns {Promise} Promise chain for initialization
-   */
-  function v3init() {
-    DEBUG && console.log('[gancube] v3init start');
-    keyCheck = 0;
-    v2initKey(true, false, 0);
-    return _service_v3data.getCharacteristics().then((chrcts) => {
-      DEBUG && console.log('[gancube] v3init find chrcts', chrcts);
-      for (let i = 0; i < chrcts.length; i++) {
-        const chrct = chrcts[i];
-        DEBUG && console.log('[gancube] v3init find chrct', chrct.uuid);
-        if (matchUUID(chrct.uuid, CHRCT_UUID_V3READ)) {
-          _chrct_v3read = chrct;
-        } else if (matchUUID(chrct.uuid, CHRCT_UUID_V3WRITE)) {
-          _chrct_v3write = chrct;
-        }
-      }
-      if (!_chrct_v3read) {
-        DEBUG && console.log('[gancube] v3init cannot find v3read chrct');
-      }
-    }).then(() => {
-      DEBUG && console.log('[gancube] v3init v3read start notifications');
-      return _chrct_v3read.startNotifications();
-    }).then(() => {
-      DEBUG && console.log('[gancube] v3init v3read notification started');
-      return _chrct_v3read.addEventListener('characteristicvaluechanged', onStateChangedV3);
-    })
-      .then(() => v3requestHardwareInfo())
-      .then(() => v3requestFacelets())
-      .then(() => v3requestBattery());
   }
 
   /**
@@ -691,16 +604,13 @@ const GanCube = (function () {
             _service_data = service;
           } else if (matchUUID(service.uuid, SERVICE_UUID_V2DATA)) {
             _service_v2data = service;
-          } else if (matchUUID(service.uuid, SERVICE_UUID_V3DATA)) {
-            _service_v3data = service;
           }
         }
         if (_service_v2data) {
           return v2init((deviceName || '').startsWith('AiCube') ? 1 : 0);
-        } if (_service_v3data) {
-          return v3init();
+        } else {
+          throw new Error("Wrong cube :(")
         }
-        logohint.push(LGHINT_BTNOTSUP);
       });
   }
 
@@ -857,7 +767,7 @@ const GanCube = (function () {
     if (!_gatt) {
       return Promise.reject('Bluetooth Cube is not connected');
     }
-    if (_service_v2data || _service_v3data) {
+    if (_service_v2data) {
       return Promise.resolve([batteryLevel, `${deviceName}*`]);
     } if (_chrct_f7) {
       return _chrct_f7.readValue().then((value) => {
@@ -1231,6 +1141,8 @@ const GanCube = (function () {
     cics: GAN_CIC_LIST,
     getBatteryLevel,
     clear,
+    v2requestFacelets,
+    v2requestReset,
   };
 }());
 
@@ -1238,7 +1150,6 @@ const GanCube = (function () {
 const GiikerCube = function () {
   let cube;
   let _device = null;
-  const solved = false;
 
   /**
    * Handles hardware events from the cube
@@ -1258,13 +1169,11 @@ const GiikerCube = function () {
 
   /**
    * Initializes connection to a Bluetooth cube
-   * @param {Object} [timer] - Timer object (optional)
    * @returns {Promise} Promise that resolves when cube is connected
    */
-  function init(timer) {
+  function init() {
     if (!window.navigator.bluetooth) {
-      alert('NO BLUETOOTH ON BROWSER');
-      return Promise.reject();
+      throw new Error('NO BLUETOOTH ON BROWSER');
     }
     let chkAvail = Promise.resolve(true);
     if (window.navigator.bluetooth.getAvailability) {
@@ -1353,12 +1262,12 @@ const GiikerCube = function () {
      * @returns {Object} Cube instance
      */
     getCube() {
-      return cube || (DEBUGBL && {
-        getBatteryLevel() { return Promise.resolve(80); },
-      });
+      return cube;
     },
   };
 };
 
 // Export GiikerCube to the global scope
 export const giikerCube = GiikerCube();
+
+window.giikerCube = giikerCube;
