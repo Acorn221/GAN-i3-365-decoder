@@ -261,14 +261,7 @@ const GanCube = (function () {
   const SERVICE_UUID_V2DATA = '6e400001-b5a3-f393-e0a9-e50e24dc4179';
   const CHRCT_UUID_V2READ = '28be4cb6-cd67-11e9-a32f-2a2ae2dbcce4';
   const CHRCT_UUID_V2WRITE = '28be4a4a-cd67-11e9-a32f-2a2ae2dbcce4';
-
-  let _service_v3data;
-  let _chrct_v3read;
-  let _chrct_v3write;
-  const SERVICE_UUID_V3DATA = '8653000a-43e6-47b7-9cb0-5fc21d4ae340';
-  const CHRCT_UUID_V3READ = '8653000b-43e6-47b7-9cb0-5fc21d4ae340';
-  const CHRCT_UUID_V3WRITE = '8653000c-43e6-47b7-9cb0-5fc21d4ae340';
-
+  
   // List of Company Identifier Codes, fill with all values range [0x0001, 0xFF01] possible for GAN cubes
   const GAN_CIC_LIST = mathlib.valuedArray(256, (i) => (i << 8) | 0x01);
 
@@ -891,212 +884,6 @@ const GanCube = (function () {
     }
   }
 
-  // Check if circular move number (modulo 256) fits into (start,end) range exclusive.
-  /**
-   * Checks if a move number is within a circular range (modulo 256)
-   * @param {number} start - Start of range
-   * @param {number} end - End of range
-   * @param {number} moveCnt - Move number to check
-   * @returns {boolean} True if move number is in range
-   */
-  function isMoveNumberInRange(start, end, moveCnt) {
-    return ((end - start) & 0xFF) > ((moveCnt - start) & 0xFF)
-      && ((start - moveCnt) & 0xFF) > 0
-      && ((end - moveCnt) & 0xFF) > 0;
-  }
-
-  /**
-   * Injects a lost move into the move buffer for V3 protocol
-   * @param {Array} move - Move data [moveCount, moveNotation, timestamp, localTime]
-   * @returns {void}
-   */
-  function v3InjectLostMoveToBuffer(move) {
-    if (moveBuffer.length > 0) {
-      // Skip if move with the same number already in the buffer
-      if (moveBuffer.some((e) => e[0] == move[0])) return;
-      // Skip if move number does not fit in range between last evicted move number and move number on buffer head, i.e. move must be one of missed
-      if (!isMoveNumberInRange(prevMoveCnt, moveBuffer[0][0], move[0])) return;
-      // Lost moves should be injected in reverse order, so just put suitable move on buffer head
-      if (move[0] == ((moveBuffer[0][0] - 1) & 0xFF)) {
-        move[2] = moveBuffer[0][2] - 10; // Set lost move device hardware timestamp near to next move event
-        moveBuffer.unshift(move);
-        DEBUG && console.log('[gancube]', 'v3 lost move recovered', move[0], move[1]);
-      }
-    }
-  }
-
-  /**
-   * Requests move history from the cube using V3 protocol
-   * @param {number} startMoveCnt - Starting move count
-   * @param {number} numberOfMoves - Number of moves to request
-   * @returns {Promise|undefined} Promise from v3sendRequest
-   */
-  function v3requestMoveHistory(startMoveCnt, numberOfMoves) {
-    const req = mathlib.valuedArray(16, 0);
-    // Move history response data is byte-aligned, and moves always starting with near-ceil odd serial number, regardless of requested.
-    // Adjust start move and number of moves to get odd number aligned history window with even number of moves inside.
-    if (startMoveCnt % 2 == 0) startMoveCnt = (startMoveCnt - 1) & 0xFF;
-    if (numberOfMoves % 2 == 1) numberOfMoves++;
-    // Never overflow requested history window beyond the move number cycle edge 255 -> 0.
-    // Because due to iCarry2 firmware bug the moves beyond the edge spoofed with 'D' (just zero bytes).
-    numberOfMoves = Math.min(numberOfMoves, startMoveCnt + 1);
-    req[0] = 0x68;
-    req[1] = 0x03;
-    req[2] = startMoveCnt;
-    req[3] = 0;
-    req[4] = numberOfMoves;
-    req[5] = 0;
-    // We can safely suppress and ignore possible GATT write errors, v3requestMoveHistory command is automatically retried on each move event if needed
-    return v3sendRequest(req).catch(window.$.noop);
-  }
-
-  /**
-   * Processes and evicts moves from the move buffer for V3 protocol
-   * @param {boolean} reqLostMoves - Whether to request lost moves if detected
-   * @returns {void}
-   */
-  function v3EvictMoveBuffer(reqLostMoves) {
-    while (moveBuffer.length > 0) {
-      const diff = (moveBuffer[0][0] - prevMoveCnt) & 0xFF;
-      if (diff > 1) {
-        DEBUG && console.log('[gancube]', 'v3 lost move detected', prevMoveCnt, moveBuffer[0][0], diff);
-        if (reqLostMoves) {
-          v3requestMoveHistory(moveBuffer[0][0], diff);
-        }
-        break;
-      } else {
-        const move = moveBuffer.shift();
-        const m = 'URFDLB'.indexOf(move[1][0]) * 3 + " 2'".indexOf(move[1][1]);
-        mathlib.CubieCube.EdgeMult(prevCubie, mathlib.CubieCube.moveCube[m], curCubie);
-        mathlib.CubieCube.CornMult(prevCubie, mathlib.CubieCube.moveCube[m], curCubie);
-        prevMoves.unshift(move[1]);
-        if (prevMoves.length > 8) prevMoves = prevMoves.slice(0, 8);
-        callback(curCubie.toFaceCube(), prevMoves, [move[2], move[3]], `${deviceName}*`);
-        const tmp = curCubie;
-        curCubie = prevCubie;
-        prevCubie = tmp;
-        prevMoveCnt = move[0];
-        DEBUG && console.log('[gancube]', 'v3 move evicted from fifo buffer', move[0], move[1], move[2], move[3]);
-      }
-    }
-    if (moveBuffer.length > 32) { // Something wrong, moves are not evicted from buffer, force cube disconnection
-      onDisconnect();
-    }
-  }
-
-  /**
-   * Event handler for V3 characteristic value changes
-   * @param {Event} event - Bluetooth characteristic value changed event
-   * @returns {void}
-   */
-  function onStateChangedV3(event) {
-    const { value } = event.target;
-    if (decoder == null) {
-      return;
-    }
-    parseV3Data(value);
-  }
-
-  /**
-   * Parses data received from the cube using V3 protocol
-   * @param {DataView} value - Raw data from the cube
-   * @returns {void}
-   */
-  function parseV3Data(value) {
-    const locTime = window.$.now();
-    DEBUG && console.log('[gancube]', 'v3 raw message', value);
-    value = decode(value);
-    for (var i = 0; i < value.length; i++) {
-      value[i] = (value[i] + 256).toString(2).slice(1);
-    }
-    value = value.join('');
-    DEBUG && console.log('[gancube]', 'v3 decrypted message', value);
-    const magic = parseInt(value.slice(0, 8), 2);
-    const mode = parseInt(value.slice(8, 16), 2);
-    const len = parseInt(value.slice(16, 24), 2);
-    if (magic != 0x55 || len <= 0) {
-      DEBUG && console.log('[gancube]', 'v3 invalid magic or len', value);
-      return;
-    }
-    if (mode == 1) { // cube move
-      DEBUG && console.log('[gancube]', 'v3 received move event', value);
-      moveCnt = parseInt(value.slice(64, 72) + value.slice(56, 64), 2);
-      if (moveCnt == prevMoveCnt || prevMoveCnt == -1) {
-        return;
-      }
-      const ts = parseInt(value.slice(48, 56) + value.slice(40, 48) + value.slice(32, 40) + value.slice(24, 32), 2);
-      var pow = parseInt(value.slice(72, 74), 2);
-      var axis = [2, 32, 8, 1, 16, 4].indexOf(parseInt(value.slice(74, 80), 2));
-      if (axis == -1) {
-        DEBUG && console.log('[gancube]', 'v3 move event invalid axis');
-        return;
-      }
-      var move = 'URFDLB'.charAt(axis) + " '".charAt(pow);
-      moveBuffer.push([moveCnt, move, ts, locTime]);
-      DEBUG && console.log('[gancube]', 'v3 move placed to fifo buffer', moveCnt, move, ts, locTime);
-      v3EvictMoveBuffer(true);
-    } else if (mode == 2) { // cube state
-      DEBUG && console.log('[gancube]', 'v3 received facelets event', value);
-      moveCnt = parseInt(value.slice(32, 40) + value.slice(24, 32), 2);
-      const cc = new mathlib.CubieCube();
-      let echk = 0;
-      let cchk = 0xf00;
-      for (var i = 0; i < 7; i++) {
-        var perm = parseInt(value.slice(40 + i * 3, 43 + i * 3), 2);
-        var ori = parseInt(value.slice(61 + i * 2, 63 + i * 2), 2);
-        cchk -= ori << 3;
-        cchk ^= perm;
-        cc.ca[i] = ori << 3 | perm;
-      }
-      cc.ca[7] = (cchk & 0xff8) % 24 | cchk & 0x7;
-      for (var i = 0; i < 11; i++) {
-        var perm = parseInt(value.slice(77 + i * 4, 81 + i * 4), 2);
-        var ori = parseInt(value.slice(121 + i, 122 + i), 2);
-        echk ^= perm << 1 | ori;
-        cc.ea[i] = perm << 1 | ori;
-      }
-      cc.ea[11] = echk;
-      if (cc.verify() != 0) {
-        keyCheck++;
-        DEBUG && console.log('[gancube]', 'v3 facelets state verify error');
-        return;
-      }
-      latestFacelet = cc.toFaceCube();
-      DEBUG && console.log('[gancube]', 'v3 facelets event state parsed', latestFacelet);
-      if (prevMoveCnt == -1) {
-        initCubeState();
-      }
-    } else if (mode == 6) { // move history
-      DEBUG && console.log('[gancube]', 'v3 received move history event', value);
-      const startMoveCnt = parseInt(value.slice(24, 32), 2);
-      const numberOfMoves = (len - 1) * 2;
-      for (var i = 0; i < numberOfMoves; i++) {
-        var axis = parseInt(value.slice(32 + 4 * i, 35 + 4 * i), 2);
-        var pow = parseInt(value.slice(35 + 4 * i, 36 + 4 * i), 2);
-        if (axis < 6) {
-          var move = 'DUBFLR'.charAt(axis) + " '".charAt(pow);
-          v3InjectLostMoveToBuffer([(startMoveCnt - i) & 0xFF, move, null, null]);
-        }
-      }
-      v3EvictMoveBuffer(false);
-    } else if (mode == 7) { // hardware info
-      DEBUG && console.log('[gancube]', 'v3 received hardware info event', value);
-      const hardwareVersion = `${parseInt(value.slice(80, 84), 2)}.${parseInt(value.slice(84, 88), 2)}`;
-      const softwareVersion = `${parseInt(value.slice(72, 76), 2)}.${parseInt(value.slice(76, 80), 2)}`;
-      let devName = '';
-      for (var i = 0; i < 5; i++) devName += String.fromCharCode(parseInt(value.slice(32 + i * 8, 40 + i * 8), 2));
-      DEBUG && console.log('[gancube]', 'Hardware Version', hardwareVersion);
-      DEBUG && console.log('[gancube]', 'Software Version', softwareVersion);
-      DEBUG && console.log('[gancube]', 'Device Name', devName);
-    } else if (mode == 16) { // battery
-      DEBUG && console.log('[gancube]', 'v3 received battery event', value);
-      batteryLevel = parseInt(value.slice(24, 32), 2);
-      // giikerutil.updateBattery([batteryLevel, deviceName + '*']);
-    } else {
-      DEBUG && console.log('[gancube]', 'v3 received unknown event', value);
-    }
-  }
-
   /**
    * Clears all cube connections and resets state
    * @returns {Promise} Promise that resolves when cleanup is complete
@@ -1108,15 +895,9 @@ const GanCube = (function () {
       result = _chrct_v2read.stopNotifications().catch(window.$.noop);
       _chrct_v2read = null;
     }
-    if (_chrct_v3read) {
-      _chrct_v3read.removeEventListener('characteristicvaluechanged', onStateChangedV3);
-      result = _chrct_v3read.stopNotifications().catch(window.$.noop);
-      _chrct_v3read = null;
-    }
     _service_data = null;
     _service_meta = null;
     _service_v2data = null;
-    _service_v3data = null;
     _gatt = null;
     deviceName = null;
     deviceMac = null;
@@ -1137,7 +918,7 @@ const GanCube = (function () {
 
   return {
     init,
-    opservs: [SERVICE_UUID_DATA, SERVICE_UUID_META, SERVICE_UUID_V2DATA, SERVICE_UUID_V3DATA],
+    opservs: [SERVICE_UUID_DATA, SERVICE_UUID_META, SERVICE_UUID_V2DATA],
     cics: GAN_CIC_LIST,
     getBatteryLevel,
     clear,
