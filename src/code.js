@@ -801,6 +801,24 @@ const GanCube = (function () {
     value = value.join('');
     const mode = parseInt(value.slice(0, 4), 2);
     if (mode == 1) { // gyro
+      // Extract gyroscope data
+      const gyroX = parseInt(value.slice(8, 16), 2) - 128; // Convert to signed value
+      const gyroY = parseInt(value.slice(16, 24), 2) - 128;
+      const gyroZ = parseInt(value.slice(24, 32), 2) - 128;
+      
+      // Log the gyroscope data
+      // console.log('[gancube] Gyroscope data:', {
+      //   x: gyroX,
+      //   y: gyroY,
+      //   z: gyroZ,
+      //   timestamp: locTime
+      // });
+      
+      // Dispatch a custom event with gyroscope data
+      const gyroEvent = new CustomEvent('gyroData', {
+        detail: { x: gyroX, y: gyroY, z: gyroZ, timestamp: locTime }
+      });
+      window.dispatchEvent(gyroEvent);
     } else if (mode == 2) { // cube move
       // DEBUG && console.log('[gancube]', 'v2 received move event', value);
       moveCnt = parseInt(value.slice(4, 12), 2);
