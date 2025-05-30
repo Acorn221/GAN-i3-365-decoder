@@ -1,13 +1,15 @@
 import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
+import { XyzTransitionGroup } from '@animxyz/react';
 import { cubePNG, cubeSVG } from 'sr-visualizer';
 import { giikerCube } from './code.js';
 import '@/index.css';
 
 const App = () => {
-  const cubeFront = useRef<HTMLDivElement>();
-  // const cubeBack = useRef<HTMLDivElement>();
+  const [count, setCount] = React.useState(0);
+  const [showCount, setShowCount] = React.useState(true);
+  const cubeDisplayRef = useRef<HTMLDivElement>();
   const [facelets, setFacelets] = useState('UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB');
 
   const convertCubeFormat = useCallback((cubeString: string): string => {
@@ -26,9 +28,16 @@ const App = () => {
       .join('');
   }, []);
 
-  const connect = useCallback(() => {
+  const increment = () => {
     giikerCube.init();
-  }, []);
+    // setShowCount(false);
+    // setTimeout(() => {
+    //   requestAnimationFrame(() => {
+    //     setShowCount(true);
+    //     setCount(count + 1);
+    //   });
+    // }, 150);
+  };
 
   useEffect(() => {
     const listener = (e: any) => {
@@ -40,32 +49,31 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (cubeFront.current) {
-      cubeFront.current.innerHTML = '';
-      cubePNG(cubeFront.current, `r=x-90y-135x-20&size=300&fc=${convertCubeFormat(facelets)}` as any);
+    if (cubeDisplayRef.current) {
+      cubeDisplayRef.current.innerHTML = '';
+      cubeSVG(cubeDisplayRef.current, `r=x-270y-225x-20&size=300&fc=${convertCubeFormat(facelets)}` as any);
     }
-  }, [cubeFront.current, facelets, convertCubeFormat]);
-
-  // useEffect(() => {
-  //   if (cubeBack.current) {
-  //     cubeBack.current.innerHTML = '';
-  //     cubeSVG(cubeBack.current, `r=x-270y-225x-20&size=300&fc=${convertCubeFormat(facelets)}` as any);
-  //   }
-  // }, [cubeBack.current, facelets, convertCubeFormat]);
+  }, [cubeDisplayRef.current, facelets, convertCubeFormat]);
 
   return (
     <div className="flex justify-center align-middle h-screen">
       <div className="bg-white m-auto p-10 rounded-xl w-3/4 md:w-1/2 text-center">
         <div className="underline text-5xl">Hello World</div>
         <div className="flex justify-center m-5">
-          <button className="text-2xl m-auto w-full bg-slate-200 hover:bg-slate-300 p-5 rounded-2xl flex text-center" onClick={() => connect()}>
-            Connect
+          <button className="text-2xl m-auto w-full bg-slate-200 hover:bg-slate-300 p-5 rounded-2xl flex" onClick={() => increment()}>
+            <div className="flex-initial">
+              Click Count:
+            </div>
+            <XyzTransitionGroup xyz="fade down-100% back-2" duration={150} className="flex-1">
+              {showCount && (
+              <div>
+                {count}
+              </div>
+              )}
+            </XyzTransitionGroup>
           </button>
         </div>
-        {/* <div className="h-64 grid grid-cols-2"> */}
-        <div ref={cubeFront.current as any} />
-        {/* <div ref={cubeBack.current as any} /> */}
-        {/* </div> */}
+        <div ref={cubeDisplayRef as any} />
         <div className="m-5 text-left">
           <div className="underline text-2xl mb-3">
             This Template Uses:
