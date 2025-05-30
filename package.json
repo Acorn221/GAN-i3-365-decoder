@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "deploy": "gh-pages -d dist"
+    "deploy:pages": "gh-pages -d dist"
   },
   "dependencies": {
     "@animxyz/core": "^0.6.6",
