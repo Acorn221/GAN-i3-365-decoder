@@ -100,7 +100,7 @@ const App = () => {
     // Listen for cube state changes
     const stateListener = (e: any) => {
       setFacelets(e.detail.facelet as string);
-      setLastMove(e.detail.move as string);
+      if (e.detail?.move?.length <= 2) setLastMove(e.detail.move);
     };
 
     // Listen for gyroscope data
@@ -160,6 +160,44 @@ const App = () => {
             </div>
           </button>
         </div>
+
+        {isConnected && (
+          <div className="flex justify-center m-5">
+            <button
+              className="text-2xl m-auto w-full p-5 rounded-2xl flex bg-blue-200 hover:bg-blue-300"
+              onClick={() => {
+                // Set last move to None after reset
+                setLastMove('None');
+
+                const cube = giikerCube.getCube();
+                if (cube) {
+                  // Using type assertion to avoid TypeScript errors
+                  const ganCube = cube as any;
+                  if (typeof ganCube.v2requestReset === 'function') {
+                    ganCube.v2requestReset()
+                      .then(() => {
+                        console.log('Cube reset successful');
+                        // Request updated state from the cube after reset
+                        if (typeof ganCube.v2requestFacelets === 'function') {
+                          return ganCube.v2requestFacelets();
+                        }
+                        return undefined;
+                      })
+                      .then(() => {
+                        console.log('Cube state updated after reset');
+                        // Last move is already set to "None" to indicate the reset operation
+                      })
+                      .catch((err: Error) => console.error('Failed to reset cube:', err));
+                  }
+                }
+              }}
+            >
+              <div className="w-full text-center">
+                Reset Cube Position
+              </div>
+            </button>
+          </div>
+        )}
         <div className="flex w-full cube-container">
           <div ref={frontCubeRef as any} className="flex-1" />
           <div ref={backCubeRef as any} className="flex-1" />
@@ -213,6 +251,7 @@ const App = () => {
             <li>○ Move tracking and replay</li>
             <li>○ Battery level monitoring</li>
             <li>○ 3D visualization</li>
+            <li>○ Reset cube position</li>
           </ul>
           <div className="underline text-2xl mb-3">
             How To Use:
@@ -222,6 +261,7 @@ const App = () => {
             <li>Once connected, the 3D model will show the current state</li>
             <li>Make moves on the physical cube to see them reflected in real-time</li>
             <li>The app tracks all moves and cube state changes</li>
+            <li>Use the &ldquo;Reset Cube Position&rdquo; button to reset the cube&apos;s position when needed</li>
           </ol>
         </div>
       </div>

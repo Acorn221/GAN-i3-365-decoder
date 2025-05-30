@@ -885,6 +885,26 @@ export const GanCube = (function () {
       cc.ea[11] = echk;
       latestFacelet = cc.toFaceCube();
       DEBUG && console.log('[gancube]', 'v2 facelets event state parsed', latestFacelet);
+      
+      // Update the prevCubie with the new state from the cube
+      // Create a new CubieCube and copy the state since there's no clone method
+      prevCubie = new mathlib.CubieCube();
+      prevCubie.ca = [...cc.ca];
+      prevCubie.ea = [...cc.ea];
+      
+      // Dispatch cube state changed event with the updated state
+      // Only update the UI without changing the last move display
+      const cubeStateEvent = new CustomEvent('cubeStateChanged', {
+        detail: {
+          facelet: latestFacelet,
+          // Don't set move property here to avoid "State Update" appearing in Last Move
+          corners: [...cc.ca],
+          edges: [...cc.ea],
+          timestamp: window.$.now()
+        }
+      });
+      window.dispatchEvent(cubeStateEvent);
+      
       if (latestFacelet === 'LLUDULLUDRFFURUBBFDRBBFFFRULFRFDRFBLBLBDLLDDURUUBBRDDR') {
         console.log('SOLVED');
         event = new CustomEvent('cubeSolved');
