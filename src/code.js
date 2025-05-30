@@ -181,11 +181,25 @@ window.$.now = () => new Date().getTime();
 
 const DEBUG = true;
 
+/**
+ * Kernal class for storing and retrieving properties
+ * @class
+ */
 class Kernal {
+  /**
+   * Creates a new Kernal instance
+   * @constructor
+   */
   constructor() {
     this.props = {};
   }
 
+  /**
+   * Gets a property value by key, or returns default if not found
+   * @param {string} key - The property key to retrieve
+   * @param {*} def - The default value to return if key not found
+   * @returns {*} The property value or default
+   */
   getProp(key, def) {
     if (this.props.hasOwnProperty(key)) {
       return this.props[key];
@@ -193,6 +207,12 @@ class Kernal {
     return def;
   }
 
+  /**
+   * Sets a property value
+   * @param {string} key - The property key to set
+   * @param {*} value - The value to set
+   * @returns {void}
+   */
   setProp(key, value) {
     this.props[key] = value;
   }
@@ -200,6 +220,12 @@ class Kernal {
 
 const kernel = new Kernal();
 
+/**
+ * Compares two UUIDs case-insensitively
+ * @param {string} uuid1 - First UUID to compare
+ * @param {string} uuid2 - Second UUID to compare
+ * @returns {boolean} True if UUIDs match (case-insensitive)
+ */
 function matchUUID(uuid1, uuid2) {
   return uuid1.toUpperCase() == uuid2.toUpperCase();
 }
@@ -259,6 +285,12 @@ const GanCube = (function () {
     'NoRgNAbAHGAsAMkwgMyzClH0LFcArHnAJzIqIBMGWEAukA',
   ];
 
+  /**
+   * Generates encryption key for the cube based on version and value
+   * @param {number} version - Version number used to select the key
+   * @param {DataView} value - Value containing bytes to modify the key
+   * @returns {Array<number>|undefined} Generated key or undefined if key not found
+   */
   function getKey(version, value) {
     let key = KEYS[version >> 8 & 0xff];
     if (!key) {
@@ -271,6 +303,12 @@ const GanCube = (function () {
     return key;
   }
 
+  /**
+   * Generates encryption key and initialization vector for V2 protocol
+   * @param {Array<number>} value - MAC address bytes
+   * @param {number} [ver=0] - Version number
+   * @returns {Array<Array<number>>} Array containing [key, iv]
+   */
   function getKeyV2(value, ver) {
     ver = ver || 0;
     const key = JSON.parse(LZString.decompressFromEncodedURIComponent(KEYS[2 + ver * 2]));
@@ -282,6 +320,11 @@ const GanCube = (function () {
     return [key, iv];
   }
 
+  /**
+   * Decodes encrypted data from the cube
+   * @param {DataView} value - Encrypted data from the cube
+   * @returns {Array<number>} Decoded data as byte array
+   */
   function decode(value) {
     const ret = [];
     for (var i = 0; i < value.byteLength; i++) {
@@ -305,6 +348,11 @@ const GanCube = (function () {
     return ret;
   }
 
+  /**
+   * Encodes data to send to the cube
+   * @param {Array<number>} ret - Data to encode
+   * @returns {Array<number>} Encoded data
+   */
   function encode(ret) {
     if (decoder == null) {
       return ret;
@@ -328,6 +376,11 @@ const GanCube = (function () {
     return ret;
   }
 
+  /**
+   * Extracts manufacturer data bytes from Bluetooth advertisement data
+   * @param {DataView|Map} mfData - Manufacturer data from Bluetooth advertisement
+   * @returns {DataView|undefined} Manufacturer data bytes or undefined if not found
+   */
   function getManufacturerDataBytes(mfData) {
     if (mfData instanceof DataView) { // this is workaround for Bluefy browser
       return mfData;
@@ -341,6 +394,10 @@ const GanCube = (function () {
     DEBUG && console.log('[gancube] Looks like this cube has new unknown CIC');
   }
 
+  /**
+   * Waits for Bluetooth advertisements to extract MAC address
+   * @returns {Promise<string>} Promise resolving to MAC address or rejecting with error code
+   */
   function waitForAdvs() {
     if (!_device?.watchAdvertisements) {
       return Promise.reject(-1);
@@ -371,6 +428,13 @@ const GanCube = (function () {
     });
   }
 
+  /**
+   * Initializes encryption key for V2 protocol
+   * @param {boolean} forcePrompt - Whether to force prompt for MAC address
+   * @param {boolean} isWrongKey - Whether the previous key was wrong
+   * @param {number} ver - Version number
+   * @returns {void}
+   */
   function v2initKey(forcePrompt, isWrongKey, ver) {
     if (deviceMac) {
       var savedMacMap = JSON.parse(kernel.getProp('giiMacMap', '{}'));
@@ -403,6 +467,12 @@ const GanCube = (function () {
     }
   }
 
+  /**
+   * Initializes the AES decoder with the given MAC address and version
+   * @param {string} mac - MAC address in format XX:XX:XX:XX:XX:XX
+   * @param {number} ver - Version number
+   * @returns {void}
+   */
   function v2initDecoder(mac, ver) {
     const value = [];
     for (let i = 0; i < 6; i++) {
@@ -414,6 +484,11 @@ const GanCube = (function () {
     decoder.iv = keyiv[1];
   }
 
+  /**
+   * Sends a request to the cube using V2 protocol
+   * @param {Array<number>} req - Request data to send
+   * @returns {Promise|undefined} Promise from writeValue or undefined if characteristic not found
+   */
   function v2sendRequest(req) {
     if (!_chrct_v2write) {
       DEBUG && console.log('[gancube] v2sendRequest cannot find v2write chrct');
@@ -424,28 +499,54 @@ const GanCube = (function () {
     return _chrct_v2write.writeValue(new Uint8Array(encodedReq).buffer);
   }
 
+  /**
+   * Sends a simple request with just an opcode using V2 protocol
+   * @param {number} opcode - Operation code to send
+   * @returns {Promise|undefined} Promise from v2sendRequest
+   */
   function v2sendSimpleRequest(opcode) {
     const req = mathlib.valuedArray(20, 0);
     req[0] = opcode;
     return v2sendRequest(req);
   }
 
+  /**
+   * Requests facelet state from the cube using V2 protocol
+   * @returns {Promise|undefined} Promise from v2sendSimpleRequest
+   */
   function v2requestFacelets() {
     return v2sendSimpleRequest(4);
   }
 
+  /**
+   * Requests battery level from the cube using V2 protocol
+   * @returns {Promise|undefined} Promise from v2sendSimpleRequest
+   */
   function v2requestBattery() {
     return v2sendSimpleRequest(9);
   }
 
+  /**
+   * Requests hardware information from the cube using V2 protocol
+   * @returns {Promise|undefined} Promise from v2sendSimpleRequest
+   */
   function v2requestHardwareInfo() {
     return v2sendSimpleRequest(5);
   }
 
+  /**
+   * Requests a reset of the cube using V2 protocol
+   * @returns {Promise|undefined} Promise from v2sendRequest
+   */
   function v2requestReset() {
     return v2sendRequest([10, 5, 57, 119, 0, 0, 1, 35, 69, 103, 137, 171, 0, 0, 0, 0, 0, 0, 0, 0]);
   }
 
+  /**
+   * Initializes the V2 protocol communication with the cube
+   * @param {number} ver - Version number
+   * @returns {Promise} Promise chain for initialization
+   */
   function v2init(ver) {
     DEBUG && console.log('[gancube] v2init start');
     keyCheck = 0;
@@ -476,6 +577,11 @@ const GanCube = (function () {
       .then(() => v2requestBattery());
   }
 
+  /**
+   * Sends a request to the cube using V3 protocol
+   * @param {Array<number>} req - Request data to send
+   * @returns {Promise|undefined} Promise from writeValue or undefined if characteristic not found
+   */
   function v3sendRequest(req) {
     if (!_chrct_v3write) {
       DEBUG && console.log('[gancube] v3sendRequest cannot find v3write chrct');
@@ -486,6 +592,11 @@ const GanCube = (function () {
     return _chrct_v3write.writeValue(new Uint8Array(encodedReq).buffer);
   }
 
+  /**
+   * Sends a simple request with just an opcode using V3 protocol
+   * @param {number} opcode - Operation code to send
+   * @returns {Promise|undefined} Promise from v3sendRequest
+   */
   function v3sendSimpleRequest(opcode) {
     const req = mathlib.valuedArray(16, 0);
     req[0] = 0x68;
@@ -493,18 +604,34 @@ const GanCube = (function () {
     return v3sendRequest(req);
   }
 
+  /**
+   * Requests facelet state from the cube using V3 protocol
+   * @returns {Promise|undefined} Promise from v3sendSimpleRequest
+   */
   function v3requestFacelets() {
     return v3sendSimpleRequest(1);
   }
 
+  /**
+   * Requests battery level from the cube using V3 protocol
+   * @returns {Promise|undefined} Promise from v3sendSimpleRequest
+   */
   function v3requestBattery() {
     return v3sendSimpleRequest(7);
   }
 
+  /**
+   * Requests hardware information from the cube using V3 protocol
+   * @returns {Promise|undefined} Promise from v3sendSimpleRequest
+   */
   function v3requestHardwareInfo() {
     return v3sendSimpleRequest(4);
   }
 
+  /**
+   * Initializes the V3 protocol communication with the cube
+   * @returns {Promise} Promise chain for initialization
+   */
   function v3init() {
     DEBUG && console.log('[gancube] v3init start');
     keyCheck = 0;
@@ -535,6 +662,11 @@ const GanCube = (function () {
       .then(() => v3requestBattery());
   }
 
+  /**
+   * Initializes communication with the GAN cube
+   * @param {BluetoothDevice} device - Bluetooth device object
+   * @returns {Promise} Promise chain for initialization
+   */
   function init(device) {
     clear();
     deviceName = device.name;
@@ -584,6 +716,10 @@ const GanCube = (function () {
   let movesFromLastCheck = 1000;
   let batteryLevel = 100;
 
+  /**
+   * Initializes the cube state and notifies the callback
+   * @returns {void}
+   */
   function initCubeState() {
     const locTime = window.$.now();
     DEBUG && console.log('[gancube]', 'init cube state');
@@ -598,6 +734,10 @@ const GanCube = (function () {
     }
   }
 
+  /**
+   * Checks the current state of the cube by reading facelet data
+   * @returns {Promise<boolean>} Promise resolving to true if state was updated, false otherwise
+   */
   function checkState() {
     if (movesFromLastCheck < 50) {
       return Promise.resolve(false);
@@ -624,6 +764,12 @@ const GanCube = (function () {
     });
   }
 
+  /**
+   * Updates move times and processes cube moves
+   * @param {number} locTime - Local timestamp in milliseconds
+   * @param {boolean} isV2 - Whether using V2 protocol
+   * @returns {void}
+   */
   function updateMoveTimes(locTime, isV2) {
     let moveDiff = (moveCnt - prevMoveCnt) & 0xff;
     DEBUG && moveDiff > 1 && console.log('[gancube]', `bluetooth event was lost, moveDiff = ${moveDiff}`);
@@ -657,6 +803,10 @@ const GanCube = (function () {
     deviceTimeOffset = locTime - deviceTime;
   }
 
+  /**
+   * Continuously reads cube state and processes moves
+   * @returns {Promise|undefined} Promise chain for reading or undefined if device not connected
+   */
   function loopRead() {
     if (!_device) {
       return;
@@ -698,6 +848,10 @@ const GanCube = (function () {
     }).then(loopRead);
   }
 
+  /**
+   * Gets the current battery level of the cube
+   * @returns {Promise<Array>} Promise resolving to [batteryLevel, deviceName]
+   */
   function getBatteryLevel() {
     if (!_gatt) {
       return Promise.reject('Bluetooth Cube is not connected');
@@ -715,6 +869,11 @@ const GanCube = (function () {
 
   var keyCheck = 0;
 
+  /**
+   * Event handler for V2 characteristic value changes
+   * @param {Event} event - Bluetooth characteristic value changed event
+   * @returns {void}
+   */
   function onStateChangedV2(event) {
     const { value } = event.target;
     if (decoder == null) {
@@ -723,6 +882,11 @@ const GanCube = (function () {
     parseV2Data(value);
   }
 
+  /**
+   * Parses data received from the cube using V2 protocol
+   * @param {DataView} value - Raw data from the cube
+   * @returns {void}
+   */
   function parseV2Data(value) {
     const locTime = window.$.now();
     // DEBUG && console.log('[gancube]', 'dec v2', value);
@@ -817,12 +981,24 @@ const GanCube = (function () {
   }
 
   // Check if circular move number (modulo 256) fits into (start,end) range exclusive.
+  /**
+   * Checks if a move number is within a circular range (modulo 256)
+   * @param {number} start - Start of range
+   * @param {number} end - End of range
+   * @param {number} moveCnt - Move number to check
+   * @returns {boolean} True if move number is in range
+   */
   function isMoveNumberInRange(start, end, moveCnt) {
     return ((end - start) & 0xFF) > ((moveCnt - start) & 0xFF)
       && ((start - moveCnt) & 0xFF) > 0
       && ((end - moveCnt) & 0xFF) > 0;
   }
 
+  /**
+   * Injects a lost move into the move buffer for V3 protocol
+   * @param {Array} move - Move data [moveCount, moveNotation, timestamp, localTime]
+   * @returns {void}
+   */
   function v3InjectLostMoveToBuffer(move) {
     if (moveBuffer.length > 0) {
       // Skip if move with the same number already in the buffer
@@ -838,6 +1014,12 @@ const GanCube = (function () {
     }
   }
 
+  /**
+   * Requests move history from the cube using V3 protocol
+   * @param {number} startMoveCnt - Starting move count
+   * @param {number} numberOfMoves - Number of moves to request
+   * @returns {Promise|undefined} Promise from v3sendRequest
+   */
   function v3requestMoveHistory(startMoveCnt, numberOfMoves) {
     const req = mathlib.valuedArray(16, 0);
     // Move history response data is byte-aligned, and moves always starting with near-ceil odd serial number, regardless of requested.
@@ -857,6 +1039,11 @@ const GanCube = (function () {
     return v3sendRequest(req).catch(window.$.noop);
   }
 
+  /**
+   * Processes and evicts moves from the move buffer for V3 protocol
+   * @param {boolean} reqLostMoves - Whether to request lost moves if detected
+   * @returns {void}
+   */
   function v3EvictMoveBuffer(reqLostMoves) {
     while (moveBuffer.length > 0) {
       const diff = (moveBuffer[0][0] - prevMoveCnt) & 0xFF;
@@ -886,6 +1073,11 @@ const GanCube = (function () {
     }
   }
 
+  /**
+   * Event handler for V3 characteristic value changes
+   * @param {Event} event - Bluetooth characteristic value changed event
+   * @returns {void}
+   */
   function onStateChangedV3(event) {
     const { value } = event.target;
     if (decoder == null) {
@@ -894,6 +1086,11 @@ const GanCube = (function () {
     parseV3Data(value);
   }
 
+  /**
+   * Parses data received from the cube using V3 protocol
+   * @param {DataView} value - Raw data from the cube
+   * @returns {void}
+   */
   function parseV3Data(value) {
     const locTime = window.$.now();
     DEBUG && console.log('[gancube]', 'v3 raw message', value);
@@ -989,6 +1186,10 @@ const GanCube = (function () {
     }
   }
 
+  /**
+   * Clears all cube connections and resets state
+   * @returns {Promise} Promise that resolves when cleanup is complete
+   */
   function clear() {
     let result = Promise.resolve();
     if (_chrct_v2read) {
@@ -1038,6 +1239,12 @@ const GiikerCube = function () {
   let _device = null;
   const solved = false;
 
+  /**
+   * Handles hardware events from the cube
+   * @param {string} info - Event information (e.g., 'disconnect')
+   * @param {Event} event - The event object
+   * @returns {Promise} Promise that resolves after handling the event
+   */
   function onHardwareEvent(info, event) {
     let res = Promise.resolve();
     if (info == 'disconnect') {
@@ -1048,6 +1255,11 @@ const GiikerCube = function () {
 
   const onDisconnect = onHardwareEvent.bind(null, 'disconnect');
 
+  /**
+   * Initializes connection to a Bluetooth cube
+   * @param {Object} [timer] - Timer object (optional)
+   * @returns {Promise} Promise that resolves when cube is connected
+   */
   function init(timer) {
     if (!window.navigator.bluetooth) {
       alert('NO BLUETOOTH ON BROWSER');
@@ -1096,6 +1308,10 @@ const GiikerCube = function () {
     });
   }
 
+  /**
+   * Stops the connection to the cube
+   * @returns {Promise} Promise that resolves when disconnection is complete
+   */
   function stop() {
     if (!_device) {
       return Promise.resolve();
@@ -1110,15 +1326,31 @@ const GiikerCube = function () {
   return {
     init,
     stop,
+    /**
+     * Checks if the cube is connected
+     * @returns {boolean} True if connected
+     */
     isConnected() {
       return _device != null || DEBUGBL;
     },
+    /**
+     * Sets the callback function for cube state changes
+     * @param {Function} func - Callback function
+     */
     setCallback(func) {
       callback = func;
     },
+    /**
+     * Sets the callback function for cube events
+     * @param {Function} func - Event callback function
+     */
     setEventCallback(func) {
       evtCallback = func;
     },
+    /**
+     * Gets the cube instance
+     * @returns {Object} Cube instance
+     */
     getCube() {
       return cube || (DEBUGBL && {
         getBatteryLevel() { return Promise.resolve(80); },
