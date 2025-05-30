@@ -231,7 +231,7 @@ function matchUUID(uuid1, uuid2) {
   return uuid1.toUpperCase() == uuid2.toUpperCase();
 }
 
-const GanCube = (function () {
+export const GanCube = (function () {
   let _device = null;
 
   let callback = () => {}
@@ -771,7 +771,7 @@ const GanCube = (function () {
 
   /**
    * Gets the current battery level of the cube
-   * @returns {Promise<Array>} Promise resolving to [batteryLevel, deviceName]
+   * @returns {Promise<[number, string]>} Promise resolving to [batteryLevel, deviceName]
    */
   function getBatteryLevel() {
     if (!_gatt) {
@@ -1105,7 +1105,7 @@ const GiikerCube = function () {
     },
     /**
      * Gets the cube instance
-     * @returns {Object} Cube instance
+     * @returns {GanCube} Cube instance
      */
     getCube() {
       return cube;

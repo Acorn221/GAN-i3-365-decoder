@@ -15,6 +15,14 @@ const App = () => {
   const [gyroData, setGyroData] = useState({ x: 0, y: 0, z: 0 });
   const [isConnected, setIsConnected] = useState(false);
   const [lastMove, setLastMove] = useState('');
+  const [batteryLevel, setBatteryLevel] = useState(0);
+
+  // Helper function to get battery color class based on level
+  const getBatteryColorClass = (level: number): string => {
+    if (level > 60) return 'bg-green-500';
+    if (level > 20) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
 
   const convertCubeFormat = useCallback((cubeString: string): string => {
     const colorMap: Record<string, string> = {
@@ -32,14 +40,61 @@ const App = () => {
       .join('');
   }, []);
 
+  // Function to fetch and update battery level
+  const updateBatteryLevel = () => {
+    if (isConnected) {
+      const cube = giikerCube.getCube();
+      if (cube) {
+        // Using type assertion to avoid TypeScript errors
+        if (typeof cube.getBatteryLevel === 'function') {
+          cube.getBatteryLevel()
+            .then(([level, name]) => {
+              setBatteryLevel(level);
+            })
+            .catch((err: Error) => console.error('Failed to get battery level:', err));
+        }
+      }
+    }
+  };
+
   const connect = () => {
     giikerCube.init()
       .then(() => {
         console.log('Connected to cube');
         setIsConnected(true);
+        // Get battery level after connection
+        setTimeout(updateBatteryLevel, 1000);
       })
       .catch((err) => console.error('Failed to connect:', err));
   };
+
+  const disconnect = () => {
+    giikerCube.stop()
+      .then(() => {
+        console.log('Disconnected from cube');
+        setIsConnected(false);
+        setGyroData({ x: 0, y: 0, z: 0 });
+        setLastMove('');
+        setBatteryLevel(0);
+      })
+      .catch((err) => console.error('Failed to disconnect:', err));
+  };
+
+  // Set up a periodic battery level check
+  useEffect(() => {
+    let batteryInterval: number | null = null;
+
+    if (isConnected) {
+      // Update battery level every 30 seconds
+      batteryInterval = window.setInterval(updateBatteryLevel, 30000);
+    }
+
+    return () => {
+      if (batteryInterval) {
+        clearInterval(batteryInterval);
+      }
+    };
+  }, [isConnected]);
 
   useEffect(() => {
     // Listen for cube state changes
@@ -86,9 +141,22 @@ const App = () => {
         <div className="underline text-5xl mb-4">GAN 356 i3 3x3</div>
         <div className="text-2xl mb-6">Bluetooth Smart Cube (Magnetic)</div>
         <div className="flex justify-center m-5">
-          <button className="text-2xl m-auto w-full bg-slate-200 hover:bg-slate-300 p-5 rounded-2xl flex" onClick={() => connect()}>
+          <button
+            className={`text-2xl m-auto w-full p-5 rounded-2xl flex ${
+              isConnected
+                ? 'bg-red-200 hover:bg-red-300'
+                : 'bg-slate-200 hover:bg-slate-300'
+            }`}
+            onClick={() => {
+              if (isConnected) {
+                disconnect();
+              } else {
+                connect();
+              }
+            }}
+          >
             <div className="w-full text-center">
-              Connect Cube
+              {isConnected ? 'Disconnect Cube' : 'Connect Cube'}
             </div>
           </button>
         </div>
@@ -118,6 +186,20 @@ const App = () => {
 
                 <div className="font-bold">Gyroscope Z:</div>
                 <div>{gyroData.z}</div>
+
+                <div className="font-bold">Battery Level:</div>
+                <div className="flex items-center">
+                  <div className="mr-2">
+                    {batteryLevel}
+                    <span>%</span>
+                  </div>
+                  <div className="w-16 h-4 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${getBatteryColorClass(batteryLevel)}`}
+                      style={{ width: `${batteryLevel}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
