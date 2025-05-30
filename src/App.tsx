@@ -2,7 +2,7 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import { cubeSVG } from 'sr-visualizer';
-import { giikerCube } from './code.js';
+import { btCube } from './code.js';
 import '@/index.css';
 
 const App = () => {
@@ -43,7 +43,7 @@ const App = () => {
   // Function to fetch and update battery level
   const updateBatteryLevel = () => {
     if (isConnected) {
-      const cube = giikerCube.getCube();
+      const cube = btCube.getCube();
       if (cube) {
         // Using type assertion to avoid TypeScript errors
         if (typeof cube.getBatteryLevel === 'function') {
@@ -58,7 +58,7 @@ const App = () => {
   };
 
   const connect = () => {
-    giikerCube.init()
+    btCube.init()
       .then(() => {
         console.log('Connected to cube');
         setIsConnected(true);
@@ -69,7 +69,7 @@ const App = () => {
   };
 
   const disconnect = () => {
-    giikerCube.stop()
+    btCube.stop()
       .then(() => {
         console.log('Disconnected from cube');
         setIsConnected(false);
@@ -169,7 +169,7 @@ const App = () => {
                 // Set last move to None after reset
                 setLastMove('None');
 
-                const cube = giikerCube.getCube();
+                const cube = btCube.getCube();
                 if (cube) {
                   // Using type assertion to avoid TypeScript errors
                   const ganCube = cube as any;

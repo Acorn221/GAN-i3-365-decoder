@@ -4,14 +4,14 @@ This project provides an interface for connecting to and interacting with the GA
 
 ## Getting Started
 
-1. Import the giikerCube module:
+1. Import the btCube module:
 ```javascript
-import { giikerCube } from './code.js';
+import { btCube } from './code.js';
 ```
 
 2. Initialize the connection to the cube:
 ```javascript
-giikerCube.init();
+btCube.init();
 ```
 
 ## Global Event Listeners
@@ -96,10 +96,10 @@ You can manually log the current state of the cube:
 
 ```javascript
 // Import the GanCube module if needed
-import { giikerCube } from './code.js';
+import { btCube } from './code.js';
 
 // Get the cube instance
-const cube = giikerCube.getCube();
+const cube = btCube.getCube();
 
 // Log the current state
 const state = cube.logCubeState();
@@ -111,14 +111,14 @@ console.log(state);
 To properly disconnect from the cube:
 
 ```javascript
-giikerCube.stop();
+btCube.stop();
 ```
 
 ## Example Usage in React
 
 ```jsx
 import React, { useEffect, useState } from 'react';
-import { giikerCube } from './code.js';
+import { btCube } from './code.js';
 
 function CubeApp() {
   const [cubeState, setCubeState] = useState('');
@@ -152,12 +152,12 @@ function CubeApp() {
       window.removeEventListener('unSolved', handleUnsolved);
       
       // Disconnect from cube when component unmounts
-      giikerCube.stop();
+      btCube.stop();
     };
   }, []);
   
   const connectCube = () => {
-    giikerCube.init()
+    btCube.init()
       .then(() => console.log('Connected to cube'))
       .catch(err => console.error('Failed to connect:', err));
   };

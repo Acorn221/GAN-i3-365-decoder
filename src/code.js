@@ -1013,7 +1013,7 @@ export const GanCube = (function () {
 }());
 
 
-const GiikerCube = function () {
+const BTCube = function () {
   let cube;
   let _device = null;
 
@@ -1133,7 +1133,7 @@ const GiikerCube = function () {
   };
 };
 
-// Export GiikerCube to the global scope
-export const giikerCube = GiikerCube();
+// Export BTCube to the global scope
+export const btCube = BTCube();
 
-window.giikerCube = giikerCube;
+window.btCube = btCube;
