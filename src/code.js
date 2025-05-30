@@ -1,7 +1,8 @@
 /* eslint-disable */
-import "./crypto.js"
 import * as LZString from 'lz-string';
 import { mathlib } from "./mathlib";
+
+window.$ = {};
 
 /**
  * Empty function that does nothing
