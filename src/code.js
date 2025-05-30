@@ -234,7 +234,7 @@ function matchUUID(uuid1, uuid2) {
 const GanCube = (function () {
   let _device = null;
 
-  const callback = window.$.noop;
+  let callback = () => {}
 
   let _gatt;
   let _service_data;
@@ -697,6 +697,23 @@ const GanCube = (function () {
       mathlib.CubieCube.CornMult(prevCubie, mathlib.CubieCube.moveCube[m], curCubie);
       deviceTime += timeOffs[i];
       callback(curCubie.toFaceCube(), prevMoves.slice(i), [deviceTime, i == 0 ? locTime : null], deviceName + (isV2 ? '*' : ''));
+      
+      // Log the cube state after applying the move
+      console.log(`Move applied: ${prevMoves[i]}`);
+      console.log(`Cube state after move: ${curCubie.toFaceCube()}`);
+      
+      // Dispatch a custom event with the updated cube state
+      const cubeStateEvent = new CustomEvent('cubeStateChanged', {
+        detail: {
+          facelet: curCubie.toFaceCube(),
+          move: prevMoves[i],
+          corners: [...curCubie.ca],
+          edges: [...curCubie.ea],
+          timestamp: deviceTime
+        }
+      });
+      window.dispatchEvent(cubeStateEvent);
+      
       const tmp = curCubie;
       curCubie = prevCubie;
       prevCubie = tmp;
@@ -839,7 +856,11 @@ const GanCube = (function () {
       }
       keyCheck += keyChkInc;
       if (keyChkInc == 0) {
+        // Log the moves that will be processed
+        console.log('V2 Protocol - Moves to be processed:', prevMoves);
         updateMoveTimes(locTime, 1);
+        // Log the current cube state after all moves have been applied
+        console.log('V2 Protocol - Current cube state after all moves:', prevCubie.faceletToNumber(prevCubie.toFaceCube()));
       }
     } else if (mode == 4) { // cube state
       // DEBUG && console.log('[gancube]', 'v2 received facelets event', value);
@@ -862,13 +883,6 @@ const GanCube = (function () {
         cc.ea[i] = perm << 1 | ori;
       }
       cc.ea[11] = echk;
-      if (cc.verify() != 0) {
-        keyCheck++;
-        DEBUG && console.log('[gancube]', 'v2 facelets state verify error');
-        event = new CustomEvent('unSolved');
-        window.dispatchEvent(event);
-        return;
-      }
       latestFacelet = cc.toFaceCube();
       DEBUG && console.log('[gancube]', 'v2 facelets event state parsed', latestFacelet);
       if (latestFacelet === 'LLUDULLUDRFFURUBBFDRBBFFFRULFRFDRFBLBLBDLLDDURUUBBRDDR') {
@@ -934,6 +948,38 @@ const GanCube = (function () {
     return result;
   }
 
+  /**
+   * Logs the current state of the cube to the console
+   * This function can be called at any time to get the current state of the cube
+   * without having to wait for a move to be made.
+   *
+   * Usage example:
+   * ```
+   * // Log the current cube state
+   * GanCube.logCubeState();
+   *
+   * // Or listen for cube state changes
+   * window.addEventListener('cubeStateChanged', (event) => {
+   *   console.log('Cube state changed:', event.detail);
+   * });
+   * ```
+   *
+   * @returns {void}
+   */
+  function logCubeState() {
+    console.log('=== Current Cube State ===');
+    console.log('Facelet Representation:', prevCubie.toFaceCube());
+    console.log('Corner Array:', prevCubie.ca);
+    console.log('Edge Array:', prevCubie.ea);
+    console.log('========================');
+    
+    return {
+      facelet: prevCubie.toFaceCube(),
+      corners: [...prevCubie.ca],
+      edges: [...prevCubie.ea]
+    };
+  }
+
   return {
     init,
     opservs: [SERVICE_UUID_DATA, SERVICE_UUID_META, SERVICE_UUID_V2DATA],
@@ -942,6 +988,7 @@ const GanCube = (function () {
     clear,
     v2requestFacelets,
     v2requestReset,
+    logCubeState, // Export the function to allow manual logging
   };
 }());
 

@@ -839,6 +839,40 @@ export const mathlib = (function () {
     }
   };
 
+  CubieCube.prototype.faceletToNumber = function(facelets) {
+    if (facelets.length !== 54) {
+      throw new Error('Facelet string must be exactly 54 characters');
+    }
+    
+    if (this.fromFacelet(facelets) === -1) {
+      throw new Error('Invalid cube state - not solvable');
+    }
+    
+    let result = 0n;
+    let multiplier = 1n;
+    
+    // Encode corner permutations (8! possibilities)
+    const cornerPerm = this.ca.map(c => c & 7);
+    result += BigInt(mathlib.getNPerm(cornerPerm, 8)) * multiplier;
+    multiplier *= BigInt(mathlib.fact[8]);
+    
+    // Encode corner orientations (3^7 possibilities, last is determined)
+    const cornerOrients = this.ca.slice(0, 7).map(c => c >> 3);
+    result += BigInt(mathlib.getNOri(cornerOrients, 7, 3)) * multiplier;
+    multiplier *= BigInt(3) ** BigInt(7);
+    
+    // Encode edge permutations (12! possibilities)
+    const edgePerm = this.ea.map(e => e >> 1);
+    result += BigInt(mathlib.getNPerm(edgePerm, 12)) * multiplier;
+    multiplier *= BigInt(mathlib.fact[12]);
+    
+    // Encode edge orientations (2^11 possibilities, last is determined)
+    const edgeOrients = this.ea.slice(0, 11).map(e => e & 1);
+    result += BigInt(mathlib.getNOri(edgeOrients, 11, 2)) * multiplier;
+    
+    return result.toString();
+  };
+
   const minx = (function () {
     const U = 0; const R = 1; const F = 2; const L = 3; const BL = 4; const BR = 5; const DR = 6; const DL = 7; const DBL = 8; const B = 9; const DBR = 10; const
       D = 11;
