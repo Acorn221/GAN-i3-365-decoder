@@ -62,8 +62,20 @@ const App = () => {
       .then(() => {
         console.log('Connected to cube');
         setIsConnected(true);
-        // Get battery level after connection
-        setTimeout(updateBatteryLevel, 1000);
+        // Get battery level immediately after connection
+        updateBatteryLevel();
+
+        // Request gyroscope data and battery level from the cube
+        const cube = btCube.getCube();
+        if (cube) {
+          // Using type assertion to avoid TypeScript errors
+          const ganCube = cube as any;
+          if (typeof ganCube.v2requestBattery === 'function') {
+            ganCube.v2requestBattery()
+              .then(() => console.log('Battery level requested'))
+              .catch((err: Error) => console.error('Failed to request battery level:', err));
+          }
+        }
       })
       .catch((err) => console.error('Failed to connect:', err));
   };
