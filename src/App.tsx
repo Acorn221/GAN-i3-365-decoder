@@ -191,7 +191,7 @@ const App = () => {
             To find it: Go to
             {' '}
             <code className="bg-gray-100 px-1 rounded">
-              chrome://bluetooth-internals
+              chrome://bluetooth-internals/#devices
             </code>
             {' '}
             in Chrome, connect your cube, and look for the MAC address in the device list.
