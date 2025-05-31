@@ -428,7 +428,7 @@ export const GanCube = (function () {
    * @param {number} ver - Version number
    * @returns {void}
    */
-  function v2initKey(forcePrompt, ver) {
+  function v2initKey(forcePrompt, ver, providedMac) {
     if (deviceMac) {
       var savedMacMap = JSON.parse(kernel.getProp('giiMacMap', '{}'));
       const prevMac = savedMacMap[deviceName];
@@ -443,8 +443,13 @@ export const GanCube = (function () {
     } else {
       var savedMacMap = JSON.parse(kernel.getProp('giiMacMap', '{}'));
       let mac = savedMacMap[deviceName];
-      if (!mac || forcePrompt) {
-        mac = 'AB:12:34:5F:B0:C4';
+      if (!mac || forcePrompt || providedMac) {
+        mac = providedMac;
+      }
+      if (!mac) {
+        DEBUG && console.log('[gancube] No MAC address provided');
+        decoder = null;
+        return;
       }
       const m = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i.exec(mac);
       if (!m) {
@@ -539,10 +544,10 @@ export const GanCube = (function () {
    * @param {number} ver - Version number
    * @returns {Promise} Promise chain for initialization
    */
-  function v2init(ver) {
+  function v2init(ver, macAddress) {
     DEBUG && console.log('[gancube] v2init start');
     keyCheck = 0;
-    v2initKey(true, ver);
+    v2initKey(true, ver, macAddress);
     return _service_v2data.getCharacteristics().then((chrcts) => {
       DEBUG && console.log('[gancube] v2init find chrcts', chrcts);
       for (let i = 0; i < chrcts.length; i++) {
@@ -574,7 +579,7 @@ export const GanCube = (function () {
    * @param {BluetoothDevice} device - Bluetooth device object
    * @returns {Promise} Promise chain for initialization
    */
-  function init(device) {
+  function init(device, macAddress) {
     clear();
     deviceName = device.name;
     DEBUG && console.log('[gancube] init gan cube start');
@@ -600,7 +605,7 @@ export const GanCube = (function () {
           }
         }
         if (_service_v2data) {
-          return v2init((deviceName || '').startsWith('AiCube') ? 1 : 0);
+          return v2init((deviceName || '').startsWith('AiCube') ? 1 : 0, macAddress);
         } else {
           throw new Error("Wrong cube :(")
         }
@@ -1037,7 +1042,7 @@ const BTCube = function () {
    * Initializes connection to a Bluetooth cube
    * @returns {Promise} Promise that resolves when cube is connected
    */
-  function init() {
+  function init(macAddress) {
     if (!window.navigator.bluetooth) {
       throw new Error('NO BLUETOOTH ON BROWSER');
     }
@@ -1078,7 +1083,7 @@ const BTCube = function () {
       device.addEventListener('gattserverdisconnected', onDisconnect);
       if (device.name.startsWith('GAN') || device.name.startsWith('MG') || device.name.startsWith('AiCube')) {
         cube = GanCube;
-        return GanCube.init(device);
+        return GanCube.init(device, macAddress);
       }
       return Promise.reject('Cannot detect device type');
     });

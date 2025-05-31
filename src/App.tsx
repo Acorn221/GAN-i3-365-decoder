@@ -16,6 +16,13 @@ const App = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMove, setLastMove] = useState('');
   const [batteryLevel, setBatteryLevel] = useState(0);
+  const [macAddress, setMacAddress] = useState(() => localStorage.getItem('cubeMacAddress') || '');
+
+  // Save MAC address to local storage when it changes
+  const handleMacAddressChange = (newMacAddress: string) => {
+    setMacAddress(newMacAddress);
+    localStorage.setItem('cubeMacAddress', newMacAddress);
+  };
 
   // Helper function to get battery color class based on level
   const getBatteryColorClass = (level: number): string => {
@@ -58,7 +65,19 @@ const App = () => {
   };
 
   const connect = () => {
-    btCube.init()
+    if (!macAddress.trim()) {
+      alert('Please enter a MAC address before connecting.');
+      return;
+    }
+
+    // Validate MAC address format
+    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+    if (!macRegex.test(macAddress)) {
+      alert('Please enter a valid MAC address in the format XX:XX:XX:XX:XX:XX');
+      return;
+    }
+
+    btCube.init(macAddress)
       .then(() => {
         console.log('Connected to cube');
         setIsConnected(true);
@@ -152,6 +171,33 @@ const App = () => {
       <div className="bg-white m-auto p-10 rounded-xl w-3/4 md:w-1/2 text-center">
         <div className="underline text-5xl mb-4">GAN 356 i3 3x3</div>
         <div className="text-2xl mb-6">Bluetooth Smart Cube (Magnetic)</div>
+
+        <div className="mb-4">
+          <label htmlFor="macAddress" className="block text-lg font-medium mb-2">
+            MAC Address:
+            <input
+              id="macAddress"
+              type="text"
+              value={macAddress}
+              onChange={(e) => handleMacAddressChange(e.target.value)}
+              placeholder="XX:XX:XX:XX:XX:XX"
+              className="w-full p-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-2"
+              disabled={isConnected}
+            />
+          </label>
+          <p className="text-sm text-gray-600 mt-1">
+            Enter your cube&apos;s MAC address (format: XX:XX:XX:XX:XX:XX).
+            <br />
+            To find it: Go to
+            {' '}
+            <code className="bg-gray-100 px-1 rounded">
+              chrome://bluetooth-internals
+            </code>
+            {' '}
+            in Chrome, connect your cube, and look for the MAC address in the device list.
+          </p>
+        </div>
+
         <div className="flex justify-center m-5 gap-2">
           <button
             className={`text-2xl m-auto w-full p-5 rounded-2xl flex flex-1 ${
@@ -223,6 +269,9 @@ const App = () => {
                 <div className="font-bold">Connection Status:</div>
                 <div className="text-green-600">Connected</div>
 
+                <div className="font-bold">MAC Address:</div>
+                <div className="font-mono text-sm">{macAddress}</div>
+
                 <div className="font-bold">Last Move:</div>
                 <div>{lastMove || 'None'}</div>
 
@@ -267,6 +316,11 @@ const App = () => {
             How To Use:
           </div>
           <ol className="list-decimal ml-5 space-y-2">
+            <li>
+              Find your cube&apos;s MAC address by going to chrome://bluetooth-internals in Chrome,
+              connecting your cube, and noting the MAC address from the device list
+            </li>
+            <li>Enter the MAC address in the field above (it will be saved automatically)</li>
             <li>Click &ldquo;Connect Cube&rdquo; to pair with your GAN 356 i3</li>
             <li>Once connected, the 3D model will show the current state</li>
             <li>Make moves on the physical cube to see them reflected in real-time</li>
