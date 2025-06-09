@@ -6,7 +6,7 @@ import { GanCube } from './gancube';
  * BTCube class for connecting to and interacting with Bluetooth cubes
  */
 export class BTCube {
-  private cube: any = null;
+  private cube: GanCube | null = null;
 
   private device: BluetoothDevice | null = null;
 
@@ -59,16 +59,16 @@ export class BTCube {
         filters: [{
           namePrefix: 'GAN',
         }],
-        optionalServices: ([] as string[]).concat(GanCube.opservs),
-        optionalManufacturerData: ([] as number[]).concat(GanCube.cics),
+        optionalServices: ([] as string[]).concat(new GanCube().opservs),
+        optionalManufacturerData: ([] as number[]).concat(new GanCube().cics),
       });
     }).then((device) => {
       this.DEBUG && console.log('[bluetooth]', device);
       this.device = device;
       device.addEventListener('gattserverdisconnected', onDisconnect);
       if (device.name?.startsWith('GAN') || device.name?.startsWith('MG') || device.name?.startsWith('AiCube')) {
-        this.cube = GanCube;
-        return GanCube.init(device, macAddress);
+        this.cube = new GanCube();
+        return this.cube.init(device, macAddress);
       }
       throw new Error('Cannot detect device type');
     });
@@ -118,9 +118,9 @@ export class BTCube {
 
   /**
    * Gets the cube instance
-   * @returns {GanCube} Cube instance
+   * @returns Cube instance
    */
-  public getCube(): typeof GanCube {
+  public getCube() {
     return this.cube;
   }
 }
