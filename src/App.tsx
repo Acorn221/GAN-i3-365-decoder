@@ -7,8 +7,33 @@ import '@/index.css';
 
 const App = () => {
   // Create an instance of BTCube
-  const btCubeRef = useRef<BTCube>(new BTCube());
-  const btCube = btCubeRef.current;
+  const btCubeRef = useRef<BTCube | null>(null);
+  const [btCube, setBtCube] = useState<BTCube | null>(null);
+
+  // Initialize the BTCube instance
+  useEffect(() => {
+    console.log('[App] Initializing BTCube instance');
+    if (!btCubeRef.current) {
+      const cube = new BTCube();
+      console.log('[App] Created BTCube instance with ID:', (cube as any).getInstanceId?.());
+      btCubeRef.current = cube;
+      setBtCube(cube);
+
+      // Test event emission from App component
+      console.log('[App] Testing event emission');
+      setTimeout(() => {
+        if (btCubeRef.current) {
+          console.log('[App] Emitting test event from App');
+          btCubeRef.current.emit('cubeStateChanged', {
+            facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
+            move: 'R',
+            timestamp: Date.now(),
+            source: 'App',
+          });
+        }
+      }, 1000);
+    }
+  }, []);
   const [count, setCount] = React.useState(0);
   const [showCount, setShowCount] = React.useState(true);
   const frontCubeRef = useRef<HTMLDivElement>();
@@ -52,7 +77,7 @@ const App = () => {
 
   // Function to fetch and update battery level
   const updateBatteryLevel = () => {
-    if (isConnected) {
+    if (isConnected && btCube) {
       const cube = btCube.getCube();
       if (cube) {
         // Using type assertion to avoid TypeScript errors
@@ -80,6 +105,8 @@ const App = () => {
       return;
     }
 
+    if (!btCube) return;
+
     btCube.init(macAddress)
       .then(() => {
         console.log('Connected to cube');
@@ -88,6 +115,7 @@ const App = () => {
         updateBatteryLevel();
 
         // Request gyroscope data and battery level from the cube
+        if (!btCube) return;
         const cube = btCube.getCube();
         if (cube) {
           // Using type assertion to avoid TypeScript errors
@@ -103,6 +131,8 @@ const App = () => {
   };
 
   const disconnect = () => {
+    if (!btCube) return;
+
     btCube.stop()
       .then(() => {
         console.log('Disconnected from cube');
@@ -131,29 +161,54 @@ const App = () => {
   }, [isConnected]);
 
   useEffect(() => {
-    // Listen for cube state changes
-    const stateListener = (e: any) => {
-      setFacelets(e.detail.facelet as string);
-      if (e.detail?.move?.length <= 2) setLastMove(e.detail.move);
-    };
+    // Listen for cube state changes and gyroscope data from the BTCube instance
+    if (btCube) {
+      console.log('[App] Setting up event listeners on BTCube instance with ID:', (btCube as any).getInstanceId?.());
 
-    // Listen for gyroscope data
-    const gyroListener = (e: any) => {
-      setGyroData({
-        x: e.detail.x,
-        y: e.detail.y,
-        z: e.detail.z,
-      });
-    };
+      // State change listener
+      const stateListener = (data: any) => {
+        console.log('[App] Received cubeStateChanged event:', data);
+        setFacelets(data.facelet as string);
+        if (data?.move?.length <= 2) setLastMove(data.move);
+      };
 
-    window.addEventListener('cubeStateChanged' as any, stateListener);
-    window.addEventListener('gyroData' as any, gyroListener);
+      // Gyroscope data listener
+      const gyroListener = (data: any) => {
+        console.log('[App] Received gyroData event:', data);
+        setGyroData({
+          x: data.x,
+          y: data.y,
+          z: data.z,
+        });
+      };
 
-    return () => {
-      window.removeEventListener('cubeStateChanged' as any, stateListener);
-      window.removeEventListener('gyroData' as any, gyroListener);
-    };
-  }, []);
+      // Register event listeners on the BTCube instance
+      console.log('[App] Registering cubeStateChanged listener');
+      btCube.on('cubeStateChanged', stateListener);
+
+      console.log('[App] Registering gyroData listener');
+      btCube.on('gyroData', gyroListener);
+
+      // Test direct event emission
+      setTimeout(() => {
+        console.log('[App] Testing direct event emission after listeners are set up');
+        btCube.emit('cubeStateChanged', {
+          facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
+          move: 'D',
+          timestamp: Date.now(),
+          source: 'App-after-listeners',
+        });
+      }, 500);
+
+      // Clean up function to remove event listeners
+      return () => {
+        console.log('[App] Removing event listeners');
+        btCube.off('cubeStateChanged', stateListener);
+        btCube.off('gyroData', gyroListener);
+      };
+    }
+    return undefined;
+  }, [btCube]); // Dependency on btCube instance
 
   useEffect(() => {
     if (frontCubeRef.current) {
@@ -227,6 +282,7 @@ const App = () => {
                 // Set last move to None after reset
                 setLastMove('None');
 
+                if (!btCube) return;
                 const cube = btCube.getCube();
                 if (cube) {
                   // Using type assertion to avoid TypeScript errors

@@ -50,7 +50,7 @@ const ganCube = new GanCube();
 ```
 
 ## TODO
-- [ ] Stop using window events and instead use a custom event emitter
+- [x] Stop using window events and instead use a custom event emitter
 - [ ] Fix the glitchy Gyro data
 - [ ] Web interface needs to grab the battery data sooner
 - [ ] EsLint + prettier need to be configured here
@@ -59,17 +59,21 @@ const ganCube = new GanCube();
 ## How to spin up the example
 Simply run `pnpm i` and `pnpm dev` to start the example app (chrome does not like localhost having bluetooth permissions, so I dev with a HTTPS CloudFlare tunnel, using `cloudflared tunnel --url http://localhost:3000`)
 
-## Global Event Listeners
+## Class-Based Event System
 
-The code.js file dispatches several custom events that you can listen for in your application:
+The library uses an object-oriented event system where each cube instance emits its own events. This replaces the previous window-based events with a more encapsulated approach.
 
-### 1. cubeStateChanged
-
-This event is fired whenever the cube state changes (after a move is made). It provides detailed information about the current state of the cube.
+### Using the Event System
 
 ```javascript
-window.addEventListener('cubeStateChanged', (event) => {
-  const { facelet, move, corners, edges, timestamp } = event.detail;
+import { BTCube } from 'gan-i360-bluetooth';
+
+// Create a cube instance
+const btCube = new BTCube();
+
+// Listen for cube state changes
+btCube.on('cubeStateChanged', (data) => {
+  const { facelet, move, corners, edges, timestamp } = data;
   
   // facelet: String representation of the cube state (e.g., "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB")
   // move: The move that was just performed (e.g., "R'")
@@ -80,57 +84,43 @@ window.addEventListener('cubeStateChanged', (event) => {
   console.log('Cube state changed:', facelet);
   console.log('Move performed:', move);
 });
-```
 
-### 2. gyroData
-
-This event provides gyroscope data from the cube, which can be used to detect cube orientation and motion.
-
-```javascript
-window.addEventListener('gyroData', (event) => {
-  const { x, y, z, timestamp } = event.detail;
+// Listen for gyroscope data
+btCube.on('gyroData', (data) => {
+  const { x, y, z, timestamp } = data;
   
   // x, y, z: Gyroscope readings for each axis
   // timestamp: Time when the data was captured
   
   console.log('Gyroscope data:', { x, y, z });
 });
-```
 
-### 3. move
-
-This event is fired when a move is made on the cube, providing the move notation and timing information.
-
-```javascript
-window.addEventListener('move', (event) => {
-  const { move, time } = event.detail;
+// Listen for move events
+btCube.on('move', (data) => {
+  const { move, time } = data;
   
   // move: The move that was performed (e.g., "R'")
   // time: Time taken to perform the move
   
   console.log('Move detected:', move, 'Time:', time);
 });
-```
 
-### 4. cubeSolved
-
-This event is fired when the cube is solved.
-
-```javascript
-window.addEventListener('cubeSolved', () => {
+// Listen for solved state
+btCube.on('cubeSolved', () => {
   console.log('Cube solved!');
   // Trigger celebration or next steps
 });
-```
 
-### 5. unSolved
-
-This event is fired when the cube is in an unsolved state.
-
-```javascript
-window.addEventListener('unSolved', () => {
+// Listen for unsolved state
+btCube.on('unSolved', () => {
   console.log('Cube is not solved');
 });
+
+// Remove event listeners when done
+btCube.off('cubeStateChanged', yourListenerFunction);
+
+// Or clear all listeners
+btCube.clearAllListeners();
 ```
 
 ## Useful Methods
@@ -162,19 +152,41 @@ btCube.stop();
 ## Example Usage in React
 
 ```jsx
-import React, { useEffect, useState } from 'react';
-import { btCube } from './code.js';
+import React, { useEffect, useState, useRef } from 'react';
+import { BTCube } from 'gan-i360-bluetooth';
 
 function CubeApp() {
+  const btCubeRef = useRef(null);
+  const [btCube, setBtCube] = useState(null);
   const [cubeState, setCubeState] = useState('');
   const [lastMove, setLastMove] = useState('');
   const [isSolved, setIsSolved] = useState(false);
   
+  // Initialize the cube instance
   useEffect(() => {
+    if (!btCubeRef.current) {
+      btCubeRef.current = new BTCube();
+      setBtCube(btCubeRef.current);
+    }
+    
+    return () => {
+      // Disconnect from cube when component unmounts
+      if (btCubeRef.current) {
+        btCubeRef.current.stop();
+      }
+    };
+  }, []);
+  
+  // Set up event listeners
+  useEffect(() => {
+    if (!btCube) return;
+    
     // Listen for cube state changes
-    const handleStateChange = (e) => {
-      setCubeState(e.detail.facelet);
-      setLastMove(e.detail.move);
+    const handleStateChange = (data) => {
+      setCubeState(data.facelet);
+      if (data.move?.length <= 2) {
+        setLastMove(data.move);
+      }
     };
     
     // Listen for solved state
@@ -187,21 +199,22 @@ function CubeApp() {
       setIsSolved(false);
     };
     
-    window.addEventListener('cubeStateChanged', handleStateChange);
-    window.addEventListener('cubeSolved', handleSolved);
-    window.addEventListener('unSolved', handleUnsolved);
+    // Register event listeners on the BTCube instance
+    btCube.on('cubeStateChanged', handleStateChange);
+    btCube.on('cubeSolved', handleSolved);
+    btCube.on('unSolved', handleUnsolved);
     
     return () => {
-      window.removeEventListener('cubeStateChanged', handleStateChange);
-      window.removeEventListener('cubeSolved', handleSolved);
-      window.removeEventListener('unSolved', handleUnsolved);
-      
-      // Disconnect from cube when component unmounts
-      btCube.stop();
+      // Remove event listeners when component unmounts
+      btCube.off('cubeStateChanged', handleStateChange);
+      btCube.off('cubeSolved', handleSolved);
+      btCube.off('unSolved', handleUnsolved);
     };
-  }, []);
+  }, [btCube]);
   
   const connectCube = () => {
+    if (!btCube) return;
+    
     btCube.init()
       .then(() => console.log('Connected to cube'))
       .catch(err => console.error('Failed to connect:', err));
