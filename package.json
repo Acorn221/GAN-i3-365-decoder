@@ -6,7 +6,7 @@
   },
   "homepage": "https://acorn221.github.io/gan-i360-bluetooth/",
   "private": false,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Library for connecting to and interacting with Bluetooth-enabled Rubik's cubes (GAN)",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
