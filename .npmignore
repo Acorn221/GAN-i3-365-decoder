@@ -1,0 +1,17 @@
+# Source files (we only want to publish the compiled output)
+src/
+# Development files
+.gitignore
+.eslintrc
+.prettierrc
+vite.config.ts
+tsconfig.json
+tsconfig.node.json
+# Build artifacts
+dist/
+node_modules/
+# Don't ignore lib directory as it contains our compiled package
+# Other
+.vscode/
+.idea/
+*.log

@@ -2,10 +2,13 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import { cubeSVG } from 'sr-visualizer';
-import { btCube } from './code.js';
+import { BTCube } from './code';
 import '@/index.css';
 
 const App = () => {
+  // Create an instance of BTCube
+  const btCubeRef = useRef<BTCube>(new BTCube());
+  const btCube = btCubeRef.current;
   const [count, setCount] = React.useState(0);
   const [showCount, setShowCount] = React.useState(true);
   const frontCubeRef = useRef<HTMLDivElement>();
@@ -55,7 +58,7 @@ const App = () => {
         // Using type assertion to avoid TypeScript errors
         if (typeof cube.getBatteryLevel === 'function') {
           cube.getBatteryLevel()
-            .then(([level, name]) => {
+            .then(([level, name]: [number, string]) => {
               setBatteryLevel(level);
             })
             .catch((err: Error) => console.error('Failed to get battery level:', err));
@@ -96,7 +99,7 @@ const App = () => {
           }
         }
       })
-      .catch((err) => console.error('Failed to connect:', err));
+      .catch((err: any) => console.error('Failed to connect:', err));
   };
 
   const disconnect = () => {
@@ -108,7 +111,7 @@ const App = () => {
         setLastMove('');
         setBatteryLevel(0);
       })
-      .catch((err) => console.error('Failed to disconnect:', err));
+      .catch((err: any) => console.error('Failed to disconnect:', err));
   };
 
   // Set up a periodic battery level check
