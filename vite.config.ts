@@ -6,7 +6,7 @@ import * as path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/gan-i360-bluetooth/', // Add base path for GitHub Pages
+  base: '/gan-i3-356-bluetooth/', // Add base path for GitHub Pages
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

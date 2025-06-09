@@ -8,7 +8,7 @@ This library provides an interface for connecting to and interacting with Blueto
 ## Installation
 
 ```bash
-npm install gan-i360-bluetooth
+npm install gan-i3-356-bluetooth
 ```
 
 ## Getting Started
@@ -16,7 +16,7 @@ npm install gan-i360-bluetooth
 ### Using the BTCube class
 
 ```javascript
-import { BTCube } from 'gan-i360-bluetooth';
+import { BTCube } from 'gan-i3-356-bluetooth';
 
 // Create a new BTCube instance
 const btCube = new BTCube();
@@ -40,7 +40,7 @@ btCube.stop();
 ### Direct access to GanCube
 
 ```javascript
-import { GanCube } from 'gan-i360-bluetooth';
+import { GanCube } from 'gan-i3-356-bluetooth';
 
 // Create a new GanCube instance
 const ganCube = new GanCube();
@@ -66,7 +66,7 @@ The library uses an object-oriented event system where each cube instance emits 
 ### Using the Event System
 
 ```javascript
-import { BTCube } from 'gan-i360-bluetooth';
+import { BTCube } from 'gan-i3-356-bluetooth';
 
 // Create a cube instance
 const btCube = new BTCube();
@@ -153,7 +153,7 @@ btCube.stop();
 
 ```jsx
 import React, { useEffect, useState, useRef } from 'react';
-import { BTCube } from 'gan-i360-bluetooth';
+import { BTCube } from 'gan-i3-356-bluetooth';
 
 function CubeApp() {
   const btCubeRef = useRef(null);
