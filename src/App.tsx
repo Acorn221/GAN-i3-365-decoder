@@ -2,7 +2,7 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import { cubeSVG } from 'sr-visualizer';
-import { btCube } from './code.js';
+import { btCube } from './code';
 import '@/index.css';
 
 const App = () => {

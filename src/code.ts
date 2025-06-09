@@ -1,12 +1,22 @@
 /* eslint-disable */
 import { GanCube } from './gancube';
 
+// Declare btCube on Window interface
+declare global {
+  interface Window {
+    btCube: any;
+  }
+}
+
 const DEBUG = true;
 
 
 const BTCube = function () {
-  let cube: typeof GanCube | null = null;
+  let cube: any = null; // Changed from typeof GanCube to any since it's used as an instance
   let _device: BluetoothDevice | null = null;
+  let callback: ((state: string, moves: string[], timestamps: [number | null, number | null], deviceName: string) => void) | null = null;
+  let evtCallback: ((info: string, event: Event) => void) | null = null;
+  const DEBUGBL = false; // Added missing DEBUGBL constant
 
   /**
    * Handles hardware events from the cube
@@ -14,12 +24,12 @@ const BTCube = function () {
    * @param {Event} event - The event object
    * @returns {Promise} Promise that resolves after handling the event
    */
-  function onHardwareEvent(info, event) {
+  function onHardwareEvent(info: string, event: Event): Promise<any> {
     let res = Promise.resolve();
     if (info == 'disconnect') {
       res = Promise.resolve(stop());
     }
-    return res.then(() => typeof evtCallback === 'function' && evtCallback(info, event));
+    return res.then(() => typeof evtCallback === 'function' ? evtCallback(info, event) : undefined);
   }
 
   const onDisconnect = onHardwareEvent.bind(null, 'disconnect');
@@ -28,7 +38,7 @@ const BTCube = function () {
    * Initializes connection to a Bluetooth cube
    * @returns {Promise} Promise that resolves when cube is connected
    */
-  function init(macAddress) {
+  function init(macAddress?: string): Promise<any> {
     if (!window.navigator.bluetooth) {
       throw new Error('NO BLUETOOTH ON BROWSER');
     }
@@ -46,14 +56,14 @@ const BTCube = function () {
         filters: [{
           namePrefix: 'GAN',
         }],
-        optionalServices: [].concat(GanCube.opservs),
-        optionalManufacturerData: [].concat(GanCube.cics),
+        optionalServices: ([] as string[]).concat(GanCube.opservs),
+        optionalManufacturerData: ([] as number[]).concat(GanCube.cics),
       });
     }).then((device) => {
       DEBUG && console.log('[bluetooth]', device);
       _device = device;
       device.addEventListener('gattserverdisconnected', onDisconnect);
-      if (device.name.startsWith('GAN') || device.name.startsWith('MG') || device.name.startsWith('AiCube')) {
+      if (device.name?.startsWith('GAN') || device.name?.startsWith('MG') || device.name?.startsWith('AiCube')) {
         cube = GanCube;
         return GanCube.init(device, macAddress);
       }
@@ -86,27 +96,27 @@ const BTCube = function () {
      * @returns {boolean} True if connected
      */
     isConnected() {
-      return _device != null || DEBUGBL;
+      return _device != null;
     },
     /**
      * Sets the callback function for cube state changes
      * @param {Function} func - Callback function
      */
-    setCallback(func) {
+    setCallback(func: (state: string, moves: string[], timestamps: [number | null, number | null], deviceName: string) => void): void {
       callback = func;
     },
     /**
      * Sets the callback function for cube events
      * @param {Function} func - Event callback function
      */
-    setEventCallback(func) {
+    setEventCallback(func: (info: string, event: Event) => void): void {
       evtCallback = func;
     },
     /**
      * Gets the cube instance
      * @returns {GanCube} Cube instance
      */
-    getCube() {
+    getCube(): typeof GanCube {
       return cube;
     },
   };
