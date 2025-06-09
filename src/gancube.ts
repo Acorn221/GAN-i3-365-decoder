@@ -805,7 +805,7 @@ export class GanCube {
 		}
 		return this._chrct_f2.readValue().then((value) => {
 			const decodedValue = this.decode(value);
-			const state = [];
+			const state: string[] = [];
 			for (let i = 0; i < decodedValue.length - 2; i += 3) {
 				const face = (decodedValue[i ^ 1] << 16) | (decodedValue[(i + 1) ^ 1] << 8) | decodedValue[(i + 2) ^ 1];
 				for (let j = 21; j >= 0; j -= 3) {

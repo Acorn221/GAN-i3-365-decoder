@@ -1,28 +1,41 @@
 {
-  "name": "gan-i365-v2-web-interface",
+  "name": "rubiks-cube-bluetooth",
   "private": false,
   "version": "0.0.1",
+  "description": "Library for connecting to and interacting with Bluetooth-enabled Rubik's cubes (GAN)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "README.md"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "web:build": "tsc && vite build",
     "preview": "vite preview",
-    "deploy:pages": "gh-pages -d dist"
+    "deploy:pages": "gh-pages -d dist",
+    "package:build": "tsc --project tsconfig.lib.json --outDir lib && cp src/mathlib.js lib/",
+    "minify": "for file in lib/*.js; do terser \"$file\" -o \"$file\" --compress; done",
+    "build:lib": "pnpm run package:build && pnpm run minify",
+    "prepublishOnly": "pnpm run build:lib"
   },
+  "keywords": [
+    "rubiks-cube",
+    "bluetooth",
+    "gan",
+    "smart-cube",
+    "web-bluetooth"
+  ],
   "dependencies": {
     "lz-string": "^1.5.0"
   },
   "devDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "sr-visualizer": "^1.0.13",
-    "tailwindcss-animatecss": "^1.0.7",
     "@animxyz/core": "^0.6.6",
     "@animxyz/react": "^0.6.7",
     "@babel/core": "^7.27.3",
     "@egjs/react-flicking": "^4.13.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "clsx": "^1.2.1",
     "@types/node": "^20.17.52",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
@@ -31,6 +44,7 @@
     "@typescript-eslint/parser": "^5.62.0",
     "@vitejs/plugin-react": "^1.3.2",
     "autoprefixer": "^10.4.21",
+    "clsx": "^1.2.1",
     "dotenv": "^16.5.0",
     "eslint": "^8.57.1",
     "eslint-config-airbnb": "^19.0.4",
@@ -40,7 +54,12 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "gh-pages": "^4.0.0",
     "postcss": "^8.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sr-visualizer": "^1.0.13",
     "tailwindcss": "^3.4.17",
+    "tailwindcss-animatecss": "^1.0.7",
+    "terser": "^5.42.0",
     "typescript": "^4.9.5",
     "vite": "^5.4.19"
   },

@@ -1,9 +1,53 @@
-# GAN 356 i3 3x3 Bluetooth Smart Cube - Developer Guide
+# Rubik's Cube Bluetooth Library
 
-This project provides an interface for connecting to and interacting with the GAN 356 i3 3x3 Bluetooth Smart Cube. Below is a guide on how to use the code.js file and its global event listeners.
+This library provides an interface for connecting to and interacting with Bluetooth-enabled Rubik's cubes, specifically the GAN 356 i3 3x3 Bluetooth Smart Cube. It allows you to track moves, monitor cube state, and receive gyroscope data. The package is fully minified for optimal performance and minimal size.
 
 > [!NOTE]
-> Credit to [CSTimer](https://github.com/cs0x7f/cstimer) for the original code that this project is based on. I've just refactored it and made it more modular so it can be more easily used.
+> Credit to [CSTimer](https://github.com/cs0x7f/cstimer) for the original code that this project is based on. It has been refactored and made more modular for easier use.
+
+## Installation
+
+```bash
+npm install rubiks-cube-bluetooth
+```
+
+## Getting Started
+
+### Using the BTCube class
+
+```javascript
+import { BTCube } from 'rubiks-cube-bluetooth';
+
+// Create a new BTCube instance
+const btCube = new BTCube();
+
+// Initialize the connection to the cube
+btCube.init()
+  .then(() => console.log('Connected to cube'))
+  .catch(err => console.error('Failed to connect:', err));
+
+// Set a callback for cube state changes
+btCube.setCallback((state, moves, timestamps, deviceName) => {
+  console.log('Cube state:', state);
+  console.log('Moves:', moves);
+  console.log('Device:', deviceName);
+});
+
+// Disconnect from the cube when done
+btCube.stop();
+```
+
+### Direct access to GanCube
+
+```javascript
+import { GanCube } from 'rubiks-cube-bluetooth';
+
+// Create a new GanCube instance
+const ganCube = new GanCube();
+
+// The GanCube class is typically used through BTCube,
+// but can be accessed directly for advanced usage
+```
 
 ## TODO
 
@@ -12,17 +56,8 @@ This project provides an interface for connecting to and interacting with the GA
 - [ ] EsLint + prettier need to be configured here
 - [ ] Convert mathlib over to typescript + use a class instead
 
-## Getting Started
-
-1. Import the btCube module:
-```javascript
-import { btCube } from './code.js';
-```
-
-2. Initialize the connection to the cube:
-```javascript
-btCube.init();
-```
+## How to spin up the example
+Simply run `pnpm i` and `pnpm dev` to start the example app (chrome does not like localhost having bluetooth permissions, so I dev with a HTTPS CloudFlare tunnel, using `cloudflared tunnel --url http://localhost:3000`)
 
 ## Global Event Listeners
 
@@ -195,3 +230,21 @@ function CubeApp() {
   - D: Down face (white)
   - L: Left face (orange)
   - B: Back face (green)
+
+## Publishing
+
+If you're maintaining this package, here's how to publish a new version:
+
+1. Update the version in package.json
+2. Build the library:
+   ```bash
+   npm run build:lib
+   ```
+3. Publish to npm:
+   ```bash
+   npm publish
+   ```
+
+## License
+
+This project is licensed under the MIT License.
