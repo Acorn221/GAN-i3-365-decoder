@@ -28,6 +28,14 @@ export class ModernRandom {
   constructor(initialSeed?: SeedType) {
     // Initialize with provided seed or random seed
     this.seed(initialSeed ?? String(Math.random()));
+    
+    // Bind methods to ensure they maintain 'this' context when used as callbacks
+    this.reset = this.reset.bind(this);
+    this.seed = this.seed.bind(this);
+    this.rand = this.rand.bind(this);
+    this.random = this.random.bind(this);
+    this.prng = this.prng.bind(this);
+    this.internals = this.internals.bind(this);
   }
 
   /**
@@ -161,5 +169,8 @@ export class ModernRandom {
 
 /**
  * Default instance for backward compatibility with the original API
+ *
+ * This is a singleton instance that provides the same API as the original
+ * IIFE implementation, ensuring compatibility with existing code.
  */
 export const modernRandom = new ModernRandom();
