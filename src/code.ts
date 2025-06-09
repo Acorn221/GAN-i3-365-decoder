@@ -1,12 +1,12 @@
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-undef */
 import { GanCube } from './gancube';
-import { eventBus } from './utils';
+import { EventEmitter } from './utils';
 
 /**
  * BTCube class for connecting to and interacting with Bluetooth cubes
  */
-export class BTCube {
+export class BTCube extends EventEmitter {
   private cube: GanCube | null = null;
 
   private device: BluetoothDevice | null = null;
@@ -18,6 +18,7 @@ export class BTCube {
   private readonly DEBUG: boolean;
 
   constructor(debug: boolean = false) {
+    super();
     this.DEBUG = debug;
   }
 
@@ -69,21 +70,15 @@ export class BTCube {
       device.addEventListener('gattserverdisconnected', onDisconnect);
       if (device.name?.startsWith('GAN') || device.name?.startsWith('MG') || device.name?.startsWith('AiCube')) {
         this.cube = new GanCube();
-        // Forward events from the GanCube instance
-        this.setupEventForwarding();
 
-        // Test event emission
-        console.log('[BTCube] Testing event emission');
-        setTimeout(() => {
-          console.log('[BTCube] Emitting test event');
-          eventBus.emit('cubeStateChanged', {
-            facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
-            move: 'U',
-            timestamp: Date.now(),
-          });
-        }, 2000);
+        // IMPORTANT: We need to set up event forwarding AFTER the cube is initialized
+        // because the initialization process might replace the cube's internal state
+        return this.cube.init(device, macAddress).then(() => {
+          // Now set up event forwarding AFTER initialization is complete
+          this.setupEventForwarding();
 
-        return this.cube.init(device, macAddress);
+          return Promise.resolve();
+        });
       }
       throw new Error('Cannot detect device type');
     });
@@ -99,7 +94,8 @@ export class BTCube {
     }
     return Promise.resolve(this.cube?.clear()).then(() => {
       console.log('[BTCube] Clearing event listeners');
-      // No need to clear event listeners as we're using the shared eventBus
+      // Clear all event listeners
+      this.clearAllListeners();
       if (this.device) {
         const onDisconnect = this.onHardwareEvent.bind(this, 'disconnect');
         this.device.removeEventListener('gattserverdisconnected', onDisconnect);
@@ -142,11 +138,49 @@ export class BTCube {
   }
 
   /**
-   * No need for event forwarding as we're using the shared eventBus
-   * GanCube will emit events directly to the eventBus
+   * Sets up event forwarding from the GanCube instance to this BTCube instance
+   * This allows components to listen to events from the BTCube instance
+   * instead of from the window object
    */
   private setupEventForwarding(): void {
-    console.log('[BTCube] Using shared eventBus, no forwarding needed');
-    this.DEBUG && console.log('[BTCube] Debug mode:', this.DEBUG);
+    if (!this.cube) {
+      console.error('[BTCube] No cube instance to forward events from');
+      return;
+    }
+
+    // Get instance IDs for debugging
+    const ganCubeId = (this.cube as any).getInstanceId ? (this.cube as any).getInstanceId() : 'unknown';
+    const btCubeId = (this as any).getInstanceId ? (this as any).getInstanceId() : 'unknown';
+
+    // List of events to forward
+    const events = [
+      'cubeStateChanged',
+      'gyroData',
+      'move',
+      'cubeSolved',
+      'unSolved',
+    ];
+
+    // Set up forwarding for each event
+    events.forEach((eventName) => {
+      // First, check if we already have a handler for this event
+      if ((this as any)[`_${eventName}Handler`]) {
+        this.cube?.off(eventName, (this as any)[`_${eventName}Handler`]);
+      }
+
+      // Create a new handler function
+      const forwardHandler = (data: any) => {
+        // Forward the event with the same name and data
+        this.emit(eventName, data);
+      };
+
+      // Store the handler reference so we can properly remove it later
+      (this as any)[`_${eventName}Handler`] = forwardHandler;
+
+      // Register the handler on the GanCube instance
+      if (this.cube) {
+        this.cube.on(eventName, forwardHandler);
+      }
+    });
   }
 }

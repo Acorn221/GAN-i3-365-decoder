@@ -3,8 +3,14 @@
 /**
  * Simple event emitter class for handling custom events
  */
-class EventEmitter {
+export class EventEmitter {
   private events: Record<string, Array<(data: any) => void>> = {};
+
+  private readonly instanceId: string;
+
+  constructor() {
+    this.instanceId = Math.random().toString(36).substring(2, 9);
+  }
 
   /**
    * Register an event listener
@@ -16,7 +22,6 @@ class EventEmitter {
       this.events[event] = [];
     }
     this.events[event].push(callback);
-    console.log(`[EventEmitter] Added listener for event: ${event}, total listeners: ${this.events[event].length}`);
   }
 
   /**
@@ -28,7 +33,6 @@ class EventEmitter {
     if (!this.events[event]) return;
     const initialLength = this.events[event].length;
     this.events[event] = this.events[event].filter((cb) => cb !== callback);
-    console.log(`[EventEmitter] Removed listener for event: ${event}, before: ${initialLength}, after: ${this.events[event].length}`);
   }
 
   /**
@@ -37,26 +41,36 @@ class EventEmitter {
    * @param data - Event data
    */
   public emit(event: string, data: any): void {
-    console.log(`[EventEmitter] Emitting event: ${event}`, data);
+    console.log(`[EventEmitter ${this.instanceId}] Emitting event: ${event}`, data);
     if (!this.events[event]) {
-      console.log(`[EventEmitter] No listeners for event: ${event}`);
+      console.log(`[EventEmitter ${this.instanceId}] No listeners for event: ${event}`);
       return;
     }
-    console.log(`[EventEmitter] Calling ${this.events[event].length} listeners for event: ${event}`);
-    this.events[event].forEach((callback) => callback(data));
+    console.log(`[EventEmitter ${this.instanceId}] Calling ${this.events[event].length} listeners for event: ${event}`);
+
+    this.events[event].forEach((callback) => {
+      try {
+        callback(data);
+      } catch (err) {
+        console.error(`[EventEmitter ${this.instanceId}] Error in event listener for ${event}:`, err);
+      }
+    });
   }
 
   /**
    * Remove all event listeners
    */
   public clearAllListeners(): void {
-    console.log('[EventEmitter] Clearing all listeners');
     this.events = {};
   }
-}
 
-// Create a single shared instance of EventEmitter
-export const eventBus = new EventEmitter();
+  /**
+   * Get the instance ID for debugging
+   */
+  public getInstanceId(): string {
+    return this.instanceId;
+  }
+}
 
 // Export the matchUUID function from the original utils file
 export function matchUUID(uuid1: string, uuid2: string): boolean {

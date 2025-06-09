@@ -3,7 +3,6 @@ import React, {
 } from 'react';
 import { cubeSVG } from 'sr-visualizer';
 import { BTCube } from './code';
-import { eventBus } from './utils';
 import '@/index.css';
 
 const App = () => {
@@ -15,18 +14,23 @@ const App = () => {
   useEffect(() => {
     console.log('[App] Initializing BTCube instance');
     if (!btCubeRef.current) {
-      btCubeRef.current = new BTCube();
-      setBtCube(btCubeRef.current);
+      const cube = new BTCube();
+      console.log('[App] Created BTCube instance with ID:', (cube as any).getInstanceId?.());
+      btCubeRef.current = cube;
+      setBtCube(cube);
 
       // Test event emission from App component
       console.log('[App] Testing event emission');
       setTimeout(() => {
-        console.log('[App] Emitting test event from App');
-        eventBus.emit('cubeStateChanged', {
-          facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
-          move: 'R',
-          timestamp: Date.now(),
-        });
+        if (btCubeRef.current) {
+          console.log('[App] Emitting test event from App');
+          btCubeRef.current.emit('cubeStateChanged', {
+            facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
+            move: 'R',
+            timestamp: Date.now(),
+            source: 'App',
+          });
+        }
       }, 1000);
     }
   }, []);
@@ -157,36 +161,54 @@ const App = () => {
   }, [isConnected]);
 
   useEffect(() => {
-    // Listen for cube state changes and gyroscope data using the shared eventBus
-    console.log('[App] Setting up event listeners using shared eventBus');
+    // Listen for cube state changes and gyroscope data from the BTCube instance
+    if (btCube) {
+      console.log('[App] Setting up event listeners on BTCube instance with ID:', (btCube as any).getInstanceId?.());
 
-    // State change listener
-    const stateListener = (data: any) => {
-      console.log('[App] Received cubeStateChanged event:', data);
-      setFacelets(data.facelet as string);
-      if (data?.move?.length <= 2) setLastMove(data.move);
-    };
+      // State change listener
+      const stateListener = (data: any) => {
+        console.log('[App] Received cubeStateChanged event:', data);
+        setFacelets(data.facelet as string);
+        if (data?.move?.length <= 2) setLastMove(data.move);
+      };
 
-    // Gyroscope data listener
-    const gyroListener = (data: any) => {
-      console.log('[App] Received gyroData event:', data);
-      setGyroData({
-        x: data.x,
-        y: data.y,
-        z: data.z,
-      });
-    };
+      // Gyroscope data listener
+      const gyroListener = (data: any) => {
+        console.log('[App] Received gyroData event:', data);
+        setGyroData({
+          x: data.x,
+          y: data.y,
+          z: data.z,
+        });
+      };
 
-    // Register event listeners on the shared eventBus
-    eventBus.on('cubeStateChanged', stateListener);
-    eventBus.on('gyroData', gyroListener);
+      // Register event listeners on the BTCube instance
+      console.log('[App] Registering cubeStateChanged listener');
+      btCube.on('cubeStateChanged', stateListener);
 
-    // Clean up function to remove event listeners
-    return () => {
-      eventBus.off('cubeStateChanged', stateListener);
-      eventBus.off('gyroData', gyroListener);
-    };
-  }, []); // No dependencies as we're using the shared eventBus
+      console.log('[App] Registering gyroData listener');
+      btCube.on('gyroData', gyroListener);
+
+      // Test direct event emission
+      setTimeout(() => {
+        console.log('[App] Testing direct event emission after listeners are set up');
+        btCube.emit('cubeStateChanged', {
+          facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
+          move: 'D',
+          timestamp: Date.now(),
+          source: 'App-after-listeners',
+        });
+      }, 500);
+
+      // Clean up function to remove event listeners
+      return () => {
+        console.log('[App] Removing event listeners');
+        btCube.off('cubeStateChanged', stateListener);
+        btCube.off('gyroData', gyroListener);
+      };
+    }
+    return undefined;
+  }, [btCube]); // Dependency on btCube instance
 
   useEffect(() => {
     if (frontCubeRef.current) {

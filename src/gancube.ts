@@ -3,9 +3,9 @@
 import * as LZString from 'lz-string';
 import { mathlib } from './mathlib';
 import { AES128 } from './aes128';
-import { matchUUID, eventBus } from './utils';
+import { matchUUID, EventEmitter } from './utils';
 
-export class GanCube {
+export class GanCube extends EventEmitter {
 	private readonly debug: boolean = true; // Enable debug mode temporarily to help diagnose issues
 	
 	// Internal state storage
@@ -79,6 +79,7 @@ export class GanCube {
 	private keyCheck = 0;
 	
 	constructor() {
+		super();
 		// Initialize the GanCube instance
 	}
 	
@@ -479,7 +480,7 @@ export class GanCube {
 			const gyroZ = parseInt(value.slice(24, 32), 2) - 128;
 			
 			// Emit gyroscope data event
-			eventBus.emit('gyroData', {
+			this.emit('gyroData', {
 				x: gyroX,
 				y: gyroY,
 				z: gyroZ,
@@ -550,7 +551,7 @@ export class GanCube {
 			this.prevCubie.ea = [...cc.ea];
 			
 			// Emit cube state changed event with the updated state
-			eventBus.emit('cubeStateChanged', {
+			this.emit('cubeStateChanged', {
 				facelet: this.latestFacelet,
 				corners: [...cc.ca],
 				edges: [...cc.ea],
@@ -562,9 +563,9 @@ export class GanCube {
 				=== 'LLUDULLUDRFFURUBBFDRBBFFFRULFRFDRFBLBLBDLLDDURUUBBRDDR'
 			) {
 				this.debug && console.log('SOLVED');
-				eventBus.emit('cubeSolved', {});
+				this.emit('cubeSolved', {});
 			} else {
-				eventBus.emit('unSolved', {});
+				this.emit('unSolved', {});
 			}
 			if (this.prevMoveCnt == -1) {
 				this.initCubeState();
@@ -649,7 +650,7 @@ export class GanCube {
 			this.debug && console.log(`Cube state after move: ${this.curCubie.toFaceCube()}`);
 			
 			// Emit a custom event with the updated cube state
-			eventBus.emit('cubeStateChanged', {
+			this.emit('cubeStateChanged', {
 				facelet: this.curCubie.toFaceCube(),
 				move: this.prevMoves[i],
 				corners: [...this.curCubie.ca],
@@ -660,7 +661,7 @@ export class GanCube {
 			const tmp = this.curCubie;
 			this.curCubie = this.prevCubie;
 			this.prevCubie = tmp;
-			eventBus.emit('move', {
+			this.emit('move', {
 				move: this.prevMoves[i],
 				time: this.timeOffs[i]
 			});
@@ -719,7 +720,8 @@ export class GanCube {
 		this.movesFromLastCheck = 1000;
 		this.batteryLevel = 100;
 		
-		// No need to clear event listeners as we're using the shared eventBus
+		// Clear all event listeners
+		this.clearAllListeners();
 		
 		return result;
 	}
