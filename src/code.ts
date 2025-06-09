@@ -5,8 +5,8 @@ const DEBUG = true;
 
 
 const BTCube = function () {
-  let cube;
-  let _device = null;
+  let cube: typeof GanCube | null = null;
+  let _device: BluetoothDevice | null = null;
 
   /**
    * Handles hardware events from the cube
@@ -70,9 +70,11 @@ const BTCube = function () {
       return Promise.resolve();
     }
     return Promise.resolve(cube?.clear()).then(() => {
-      _device.removeEventListener('gattserverdisconnected', onDisconnect);
-      _device.gatt.disconnect();
-      _device = null;
+      if (_device) {
+        _device.removeEventListener('gattserverdisconnected', onDisconnect);
+        _device.gatt && _device.gatt.disconnect();
+        _device = null;
+      }
     });
   }
 
