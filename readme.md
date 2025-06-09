@@ -8,7 +8,7 @@ This library provides an interface for connecting to and interacting with Blueto
 ## Installation
 
 ```bash
-npm install rubiks-cube-bluetooth
+npm install gan-i360-bluetooth
 ```
 
 ## Getting Started
@@ -16,7 +16,7 @@ npm install rubiks-cube-bluetooth
 ### Using the BTCube class
 
 ```javascript
-import { BTCube } from 'rubiks-cube-bluetooth';
+import { BTCube } from 'gan-i360-bluetooth';
 
 // Create a new BTCube instance
 const btCube = new BTCube();
@@ -40,7 +40,7 @@ btCube.stop();
 ### Direct access to GanCube
 
 ```javascript
-import { GanCube } from 'rubiks-cube-bluetooth';
+import { GanCube } from 'gan-i360-bluetooth';
 
 // Create a new GanCube instance
 const ganCube = new GanCube();
@@ -50,7 +50,7 @@ const ganCube = new GanCube();
 ```
 
 ## TODO
-
+- [ ] Stop using window events and instead use a custom event emitter
 - [ ] Fix the glitchy Gyro data
 - [ ] Web interface needs to grab the battery data sooner
 - [ ] EsLint + prettier need to be configured here
