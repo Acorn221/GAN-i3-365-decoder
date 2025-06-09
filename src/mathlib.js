@@ -360,7 +360,7 @@ export const mathlib = (function () {
 
   function createMove(moveTable, size, doMove, N_MOVES) {
     N_MOVES = N_MOVES || 6;
-    if (window.$.isArray(doMove)) {
+    if (Array.isArray(doMove)) {
       const cord = new coord(doMove[1], doMove[2], doMove[3]);
       doMove = doMove[0];
       for (let j = 0; j < N_MOVES; j++) {
@@ -946,7 +946,7 @@ export const mathlib = (function () {
   }());
 
   function createPrun(prun, init, size, maxd, doMove, N_MOVES, N_POWER, N_INV) {
-    const isMoveTable = window.$.isArray(doMove);
+    const isMoveTable = Array.isArray(doMove);
     N_MOVES = N_MOVES || 6;
     N_POWER = N_POWER || 3;
     N_INV = N_INV || 256;
@@ -954,7 +954,7 @@ export const mathlib = (function () {
     for (var i = 0, len = (size + 7) >>> 3; i < len; i++) {
       prun[i] = -1;
     }
-    if (!window.$.isArray(init)) {
+    if (!Array.isArray(init)) {
       init = [init];
     }
     for (var i = 0; i < init.length; i++) {

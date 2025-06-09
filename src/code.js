@@ -1,21 +1,7 @@
 /* eslint-disable */
 import * as LZString from 'lz-string';
 import { mathlib } from "./mathlib";
-import {AES128} from './aes128-2';
-
-window.$ = {};
-
-/**
- * Empty function that does nothing
- * @returns {void}
- */
-window.$.noop = () => { };
-
-/**
- * Returns the current timestamp in milliseconds
- * @returns {number} Current timestamp in milliseconds
- */
-window.$.now = () => new Date().getTime();
+import {AES128} from './aes128';
 
 // AES-128 implementation
 
