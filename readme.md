@@ -238,7 +238,7 @@ If you're maintaining this package, here's how to publish a new version:
 1. Update the version in package.json
 2. Build the library:
    ```bash
-   npm run build:lib
+   pnpm run build:lib
    ```
 3. Publish to npm:
    ```bash
