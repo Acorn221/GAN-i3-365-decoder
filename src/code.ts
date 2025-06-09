@@ -1,22 +1,20 @@
-/* eslint-disable */
+/* eslint-disable no-unused-expressions */
+/* eslint-disable no-undef */
 import { GanCube } from './gancube';
-
-// Declare BTCube on Window interface
-declare global {
-  interface Window {
-    btCube: any;
-  }
-}
 
 /**
  * BTCube class for connecting to and interacting with Bluetooth cubes
  */
 export class BTCube {
   private cube: any = null;
-  private _device: BluetoothDevice | null = null;
+
+  private device: BluetoothDevice | null = null;
+
   private callback: ((state: string, moves: string[], timestamps: [number | null, number | null], deviceName: string) => void) | null = null;
+
   private evtCallback: ((info: string, event: Event) => void) | null = null;
-  private readonly DEBUG: boolean;;
+
+  private readonly DEBUG: boolean;
 
   constructor(debug: boolean = false) {
     this.DEBUG = debug;
@@ -30,10 +28,10 @@ export class BTCube {
    */
   private onHardwareEvent(info: string, event: Event): Promise<any> {
     let res = Promise.resolve();
-    if (info == 'disconnect') {
+    if (info === 'disconnect') {
       res = Promise.resolve(this.stop());
     }
-    return res.then(() => typeof this.evtCallback === 'function' ? this.evtCallback(info, event) : undefined);
+    return res.then(() => (typeof this.evtCallback === 'function' ? this.evtCallback(info, event) : undefined));
   }
 
   /**
@@ -55,7 +53,7 @@ export class BTCube {
     return chkAvail.then((available) => {
       this.DEBUG && console.log('[bluetooth]', 'is available', available);
       if (!available) {
-        return Promise.reject('GIIKER_NOBLEMSG');
+        throw new Error('GIIKER_NOBLEMSG');
       }
       return window.navigator.bluetooth.requestDevice({
         filters: [{
@@ -66,13 +64,13 @@ export class BTCube {
       });
     }).then((device) => {
       this.DEBUG && console.log('[bluetooth]', device);
-      this._device = device;
+      this.device = device;
       device.addEventListener('gattserverdisconnected', onDisconnect);
       if (device.name?.startsWith('GAN') || device.name?.startsWith('MG') || device.name?.startsWith('AiCube')) {
         this.cube = GanCube;
         return GanCube.init(device, macAddress);
       }
-      return Promise.reject('Cannot detect device type');
+      throw new Error('Cannot detect device type');
     });
   }
 
@@ -81,15 +79,15 @@ export class BTCube {
    * @returns {Promise} Promise that resolves when disconnection is complete
    */
   public stop(): Promise<void> {
-    if (!this._device) {
+    if (!this.device) {
       return Promise.resolve();
     }
     return Promise.resolve(this.cube?.clear()).then(() => {
-      if (this._device) {
+      if (this.device) {
         const onDisconnect = this.onHardwareEvent.bind(this, 'disconnect');
-        this._device.removeEventListener('gattserverdisconnected', onDisconnect);
-        this._device.gatt && this._device.gatt.disconnect();
-        this._device = null;
+        this.device.removeEventListener('gattserverdisconnected', onDisconnect);
+        this.device.gatt && this.device.gatt.disconnect();
+        this.device = null;
       }
     });
   }
@@ -99,7 +97,7 @@ export class BTCube {
    * @returns {boolean} True if connected
    */
   public isConnected(): boolean {
-    return this._device != null;
+    return this.device != null;
   }
 
   /**
