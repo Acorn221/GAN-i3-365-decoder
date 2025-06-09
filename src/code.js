@@ -44,21 +44,7 @@ const BTCube = function () {
       }
       return window.navigator.bluetooth.requestDevice({
         filters: [{
-          namePrefix: 'Gi',
-        }, {
-          namePrefix: 'Mi Smart',
-        }, {
           namePrefix: 'GAN',
-        }, {
-          namePrefix: 'MG',
-        }, {
-          namePrefix: 'AiCube',
-        }, {
-          namePrefix: 'GoCube',
-        }, {
-          namePrefix: 'Rubiks',
-        }, {
-          namePrefix: 'MHC',
         }],
         optionalServices: [].concat(GanCube.opservs),
         optionalManufacturerData: [].concat(GanCube.cics),
