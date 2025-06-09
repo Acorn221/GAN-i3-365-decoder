@@ -3,10 +3,10 @@
 import * as LZString from 'lz-string';
 import { mathlib } from './mathlib';
 import { AES128 } from './aes128';
-import { matchUUID } from './utils';
+import { matchUUID, eventBus } from './utils';
 
 export class GanCube {
-	private readonly debug: boolean = false;
+	private readonly debug: boolean = true; // Enable debug mode temporarily to help diagnose issues
 	
 	// Internal state storage
 	private props: Record<string, any> = {};
@@ -478,16 +478,13 @@ export class GanCube {
 			const gyroY = parseInt(value.slice(16, 24), 2) - 128;
 			const gyroZ = parseInt(value.slice(24, 32), 2) - 128;
 			
-			// Dispatch a custom event with gyroscope data
-			const gyroEvent = new CustomEvent('gyroData', {
-				detail: {
-					x: gyroX,
-					y: gyroY,
-					z: gyroZ,
-					timestamp: locTime,
-				},
+			// Emit gyroscope data event
+			eventBus.emit('gyroData', {
+				x: gyroX,
+				y: gyroY,
+				z: gyroZ,
+				timestamp: locTime,
 			});
-			window.dispatchEvent(gyroEvent);
 		} else if (mode == 2) {
 			// cube move
 			this.moveCnt = parseInt(value.slice(4, 12), 2);
@@ -509,11 +506,11 @@ export class GanCube {
 			}
 			this.keyCheck += keyChkInc;
 			if (keyChkInc == 0) {
-				// Log the moves that will be processed
-				console.log('V2 Protocol - Moves to be processed:', this.prevMoves);
+				// Process the moves
+				this.debug && console.log('V2 Protocol - Moves to be processed:', this.prevMoves);
 				this.updateMoveTimes(locTime, true);
-				// Log the current cube state after all moves have been applied
-				console.log(
+				// Log the current cube state after all moves have been applied if in debug mode
+				this.debug && console.log(
 					'V2 Protocol - Current cube state after all moves:',
 					this.prevCubie.faceletToNumber(this.prevCubie.toFaceCube()),
 				);
@@ -552,27 +549,22 @@ export class GanCube {
 			this.prevCubie.ca = [...cc.ca];
 			this.prevCubie.ea = [...cc.ea];
 			
-			// Dispatch cube state changed event with the updated state
-			const cubeStateEvent = new CustomEvent('cubeStateChanged', {
-				detail: {
-					facelet: this.latestFacelet,
-					corners: [...cc.ca],
-					edges: [...cc.ea],
-					timestamp: Date.now(),
-				},
+			// Emit cube state changed event with the updated state
+			eventBus.emit('cubeStateChanged', {
+				facelet: this.latestFacelet,
+				corners: [...cc.ca],
+				edges: [...cc.ea],
+				timestamp: Date.now(),
 			});
-			window.dispatchEvent(cubeStateEvent);
 			
 			if (
 				this.latestFacelet
 				=== 'LLUDULLUDRFFURUBBFDRBBFFFRULFRFDRFBLBLBDLLDDURUUBBRDDR'
 			) {
-				console.log('SOLVED');
-				const event = new CustomEvent('cubeSolved');
-				window.dispatchEvent(event);
+				this.debug && console.log('SOLVED');
+				eventBus.emit('cubeSolved', {});
 			} else {
-				const event = new CustomEvent('unSolved');
-				window.dispatchEvent(event);
+				eventBus.emit('unSolved', {});
 			}
 			if (this.prevMoveCnt == -1) {
 				this.initCubeState();
@@ -652,29 +644,26 @@ export class GanCube {
 			);
 			this.deviceTime += this.timeOffs[i];
 			
-			// Log the cube state after applying the move
-			console.log(`Move applied: ${this.prevMoves[i]}`);
-			console.log(`Cube state after move: ${this.curCubie.toFaceCube()}`);
+			// Log the cube state after applying the move if in debug mode
+			this.debug && console.log(`Move applied: ${this.prevMoves[i]}`);
+			this.debug && console.log(`Cube state after move: ${this.curCubie.toFaceCube()}`);
 			
-			// Dispatch a custom event with the updated cube state
-			const cubeStateEvent = new CustomEvent('cubeStateChanged', {
-				detail: {
-					facelet: this.curCubie.toFaceCube(),
-					move: this.prevMoves[i],
-					corners: [...this.curCubie.ca],
-					edges: [...this.curCubie.ea],
-					timestamp: this.deviceTime,
-				},
+			// Emit a custom event with the updated cube state
+			eventBus.emit('cubeStateChanged', {
+				facelet: this.curCubie.toFaceCube(),
+				move: this.prevMoves[i],
+				corners: [...this.curCubie.ca],
+				edges: [...this.curCubie.ea],
+				timestamp: this.deviceTime,
 			});
-			window.dispatchEvent(cubeStateEvent);
 			
 			const tmp = this.curCubie;
 			this.curCubie = this.prevCubie;
 			this.prevCubie = tmp;
-			const moveEvent = new CustomEvent('move', {
-				detail: { move: this.prevMoves[i], time: this.timeOffs[i] },
+			eventBus.emit('move', {
+				move: this.prevMoves[i],
+				time: this.timeOffs[i]
 			});
-			window.dispatchEvent(moveEvent);
 			this.debug && console.log('[gancube] move', this.prevMoves[i], this.timeOffs[i]);
 		}
 		this.deviceTimeOffset = locTime - this.deviceTime;
@@ -729,6 +718,9 @@ export class GanCube {
 		this.prevMoveCnt = -1;
 		this.movesFromLastCheck = 1000;
 		this.batteryLevel = 100;
+		
+		// No need to clear event listeners as we're using the shared eventBus
+		
 		return result;
 	}
 	

@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-undef */
 import { GanCube } from './gancube';
+import { eventBus } from './utils';
 
 /**
  * BTCube class for connecting to and interacting with Bluetooth cubes
@@ -68,6 +69,20 @@ export class BTCube {
       device.addEventListener('gattserverdisconnected', onDisconnect);
       if (device.name?.startsWith('GAN') || device.name?.startsWith('MG') || device.name?.startsWith('AiCube')) {
         this.cube = new GanCube();
+        // Forward events from the GanCube instance
+        this.setupEventForwarding();
+
+        // Test event emission
+        console.log('[BTCube] Testing event emission');
+        setTimeout(() => {
+          console.log('[BTCube] Emitting test event');
+          eventBus.emit('cubeStateChanged', {
+            facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
+            move: 'U',
+            timestamp: Date.now(),
+          });
+        }, 2000);
+
         return this.cube.init(device, macAddress);
       }
       throw new Error('Cannot detect device type');
@@ -83,6 +98,8 @@ export class BTCube {
       return Promise.resolve();
     }
     return Promise.resolve(this.cube?.clear()).then(() => {
+      console.log('[BTCube] Clearing event listeners');
+      // No need to clear event listeners as we're using the shared eventBus
       if (this.device) {
         const onDisconnect = this.onHardwareEvent.bind(this, 'disconnect');
         this.device.removeEventListener('gattserverdisconnected', onDisconnect);
@@ -122,5 +139,14 @@ export class BTCube {
    */
   public getCube() {
     return this.cube;
+  }
+
+  /**
+   * No need for event forwarding as we're using the shared eventBus
+   * GanCube will emit events directly to the eventBus
+   */
+  private setupEventForwarding(): void {
+    console.log('[BTCube] Using shared eventBus, no forwarding needed');
+    this.DEBUG && console.log('[BTCube] Debug mode:', this.DEBUG);
   }
 }

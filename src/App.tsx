@@ -3,12 +3,33 @@ import React, {
 } from 'react';
 import { cubeSVG } from 'sr-visualizer';
 import { BTCube } from './code';
+import { eventBus } from './utils';
 import '@/index.css';
 
 const App = () => {
   // Create an instance of BTCube
-  const btCubeRef = useRef<BTCube>(new BTCube());
-  const btCube = btCubeRef.current;
+  const btCubeRef = useRef<BTCube | null>(null);
+  const [btCube, setBtCube] = useState<BTCube | null>(null);
+
+  // Initialize the BTCube instance
+  useEffect(() => {
+    console.log('[App] Initializing BTCube instance');
+    if (!btCubeRef.current) {
+      btCubeRef.current = new BTCube();
+      setBtCube(btCubeRef.current);
+
+      // Test event emission from App component
+      console.log('[App] Testing event emission');
+      setTimeout(() => {
+        console.log('[App] Emitting test event from App');
+        eventBus.emit('cubeStateChanged', {
+          facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
+          move: 'R',
+          timestamp: Date.now(),
+        });
+      }, 1000);
+    }
+  }, []);
   const [count, setCount] = React.useState(0);
   const [showCount, setShowCount] = React.useState(true);
   const frontCubeRef = useRef<HTMLDivElement>();
@@ -52,7 +73,7 @@ const App = () => {
 
   // Function to fetch and update battery level
   const updateBatteryLevel = () => {
-    if (isConnected) {
+    if (isConnected && btCube) {
       const cube = btCube.getCube();
       if (cube) {
         // Using type assertion to avoid TypeScript errors
@@ -80,6 +101,8 @@ const App = () => {
       return;
     }
 
+    if (!btCube) return;
+
     btCube.init(macAddress)
       .then(() => {
         console.log('Connected to cube');
@@ -88,6 +111,7 @@ const App = () => {
         updateBatteryLevel();
 
         // Request gyroscope data and battery level from the cube
+        if (!btCube) return;
         const cube = btCube.getCube();
         if (cube) {
           // Using type assertion to avoid TypeScript errors
@@ -103,6 +127,8 @@ const App = () => {
   };
 
   const disconnect = () => {
+    if (!btCube) return;
+
     btCube.stop()
       .then(() => {
         console.log('Disconnected from cube');
@@ -131,29 +157,36 @@ const App = () => {
   }, [isConnected]);
 
   useEffect(() => {
-    // Listen for cube state changes
-    const stateListener = (e: any) => {
-      setFacelets(e.detail.facelet as string);
-      if (e.detail?.move?.length <= 2) setLastMove(e.detail.move);
+    // Listen for cube state changes and gyroscope data using the shared eventBus
+    console.log('[App] Setting up event listeners using shared eventBus');
+
+    // State change listener
+    const stateListener = (data: any) => {
+      console.log('[App] Received cubeStateChanged event:', data);
+      setFacelets(data.facelet as string);
+      if (data?.move?.length <= 2) setLastMove(data.move);
     };
 
-    // Listen for gyroscope data
-    const gyroListener = (e: any) => {
+    // Gyroscope data listener
+    const gyroListener = (data: any) => {
+      console.log('[App] Received gyroData event:', data);
       setGyroData({
-        x: e.detail.x,
-        y: e.detail.y,
-        z: e.detail.z,
+        x: data.x,
+        y: data.y,
+        z: data.z,
       });
     };
 
-    window.addEventListener('cubeStateChanged' as any, stateListener);
-    window.addEventListener('gyroData' as any, gyroListener);
+    // Register event listeners on the shared eventBus
+    eventBus.on('cubeStateChanged', stateListener);
+    eventBus.on('gyroData', gyroListener);
 
+    // Clean up function to remove event listeners
     return () => {
-      window.removeEventListener('cubeStateChanged' as any, stateListener);
-      window.removeEventListener('gyroData' as any, gyroListener);
+      eventBus.off('cubeStateChanged', stateListener);
+      eventBus.off('gyroData', gyroListener);
     };
-  }, []);
+  }, []); // No dependencies as we're using the shared eventBus
 
   useEffect(() => {
     if (frontCubeRef.current) {
@@ -227,6 +260,7 @@ const App = () => {
                 // Set last move to None after reset
                 setLastMove('None');
 
+                if (!btCube) return;
                 const cube = btCube.getCube();
                 if (cube) {
                   // Using type assertion to avoid TypeScript errors
