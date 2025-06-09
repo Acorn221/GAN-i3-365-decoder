@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+// TODO: Refactor this?
+
 /**
  * Modern replacement for isaac PRNG using Web Crypto API
  * Provides a compatible API with the original isaac implementation

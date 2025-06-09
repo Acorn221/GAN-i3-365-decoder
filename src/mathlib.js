@@ -1,6 +1,8 @@
 /* eslint-disable */
 import { modernRandom } from "./rand";
 
+// TODO: Maybe convert this over to a typescript using a class
+
 const DEBUG = false;
 
 export const mathlib = (function () {
