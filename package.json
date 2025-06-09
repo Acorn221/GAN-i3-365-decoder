@@ -1,5 +1,5 @@
 {
-  "name": "rubiks-cube-bluetooth",
+  "name": "gan-i360-bluetooth",
   "private": false,
   "version": "0.0.1",
   "description": "Library for connecting to and interacting with Bluetooth-enabled Rubik's cubes (GAN)",
