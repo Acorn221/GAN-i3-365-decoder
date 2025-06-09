@@ -2,6 +2,16 @@
 
 This project provides an interface for connecting to and interacting with the GAN 356 i3 3x3 Bluetooth Smart Cube. Below is a guide on how to use the code.js file and its global event listeners.
 
+> [!NOTE]
+> Credit to [CSTimer](https://github.com/cs0x7f/cstimer) for the original code that this project is based on. I've just refactored it and made it more modular so it can be more easily used.
+
+## TODO
+
+- [ ] Fix the glitchy Gyro data
+- [ ] Web interface needs to grab the battery data sooner
+- [ ] EsLint + prettier need to be configured here
+- [ ] Convert mathlib over to typescript + use a class instead
+
 ## Getting Started
 
 1. Import the btCube module:
