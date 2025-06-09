@@ -221,7 +221,7 @@ function CubeApp() {
 ## Technical Notes
 
 - The cube communicates using Bluetooth Low Energy (BLE)
-- The code supports both the original GAN protocol and the newer V2 protocol
+- This has only been tested on the "GAN V2 protocol"
 - Move notation follows standard Rubik's cube notation (U, R, F, D, L, B with ' for counterclockwise)
 - The facelet representation uses the following convention:
   - U: Up face (yellow)
