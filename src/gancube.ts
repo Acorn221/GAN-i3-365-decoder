@@ -4,6 +4,7 @@ import * as LZString from 'lz-string';
 import { mathlib } from './mathlib';
 import { AES128 } from './aes128';
 import { matchUUID, EventEmitter } from './utils';
+import { CubeNumberConverter } from './cubenum';
 
 export class GanCube extends EventEmitter {
 	private readonly debug: boolean = true; // Enable debug mode temporarily to help diagnose issues
@@ -949,4 +950,12 @@ export class GanCube extends EventEmitter {
 	public get cics(): number[] {
 		return this.GAN_CIC_LIST;
 	}
+
+
+  public getStateHex(): string {
+    return CubeNumberConverter.cubeNumberToHex(CubeNumberConverter.cubeStateToNumber(
+      this.prevCubie.ca,
+      this.prevCubie.ea
+    ));
+  }
 }

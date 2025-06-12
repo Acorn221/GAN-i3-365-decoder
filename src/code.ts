@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-undef */
+import { CubeNumberConverter } from './cubenum';
 import { GanCube } from './gancube';
 import { EventEmitter } from './utils';
 

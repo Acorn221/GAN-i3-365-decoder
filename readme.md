@@ -51,6 +51,8 @@ const ganCube = new GanCube();
 
 ## TODO
 - [x] Stop using window events and instead use a custom event emitter
+- [ ] Setup proper types for the events
+- [x] add a cube "state" number
 - [ ] Fix the glitchy Gyro data
 - [ ] Web interface needs to grab the battery data sooner
 - [ ] EsLint + prettier need to be configured here

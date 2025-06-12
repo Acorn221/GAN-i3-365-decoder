@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
@@ -45,6 +46,7 @@ const App = () => {
   const [lastMove, setLastMove] = useState('');
   const [batteryLevel, setBatteryLevel] = useState(0);
   const [macAddress, setMacAddress] = useState(() => localStorage.getItem('cubeMacAddress') || '');
+  const [cubeNum, setCubeNum] = useState('');
 
   // Save MAC address to local storage when it changes
   const handleMacAddressChange = (newMacAddress: string) => {
@@ -170,6 +172,7 @@ const App = () => {
         console.log('[App] Received cubeStateChanged event:', data);
         setFacelets(data.facelet as string);
         if (data?.move?.length <= 2) setLastMove(data.move);
+        setCubeNum(btCube.getCube()?.getStateHex() || '');
       };
 
       // Gyroscope data listener
@@ -188,17 +191,6 @@ const App = () => {
 
       console.log('[App] Registering gyroData listener');
       btCube.on('gyroData', gyroListener);
-
-      // Test direct event emission
-      setTimeout(() => {
-        console.log('[App] Testing direct event emission after listeners are set up');
-        btCube.emit('cubeStateChanged', {
-          facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
-          move: 'D',
-          timestamp: Date.now(),
-          source: 'App-after-listeners',
-        });
-      }, 500);
 
       // Clean up function to remove event listeners
       return () => {
@@ -355,6 +347,10 @@ const App = () => {
                       style={{ width: `${batteryLevel}%` }}
                     />
                   </div>
+                </div>
+                <div className="font-bold">Cube Number:</div>
+                <div className="font-mono text-sm">
+                  {cubeNum || 'N/A'}
                 </div>
               </div>
             </div>
