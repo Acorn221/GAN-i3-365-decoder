@@ -1,13 +1,14 @@
 /* eslint-disable no-unused-expressions */
 /* eslint-disable no-undef */
 import { CubeNumberConverter } from './cubenum';
-import { GanCube } from './gancube';
-import { EventEmitter } from './utils';
+import { GanCube, GanCubeEventMap } from './gancube';
+import { EventEmitter, EventHandler } from './utils';
 
 /**
  * BTCube class for connecting to and interacting with Bluetooth cubes
+ * Reuses the same event types as GanCube since we're forwarding those events
  */
-export class BTCube extends EventEmitter {
+export class BTCube extends EventEmitter<GanCubeEventMap> {
   private cube: GanCube | null = null;
 
   private device: BluetoothDevice | null = null;
@@ -153,8 +154,9 @@ export class BTCube extends EventEmitter {
     const ganCubeId = (this.cube as any).getInstanceId ? (this.cube as any).getInstanceId() : 'unknown';
     const btCubeId = (this as any).getInstanceId ? (this as any).getInstanceId() : 'unknown';
 
-    // List of events to forward
-    const events = [
+    // List of events to forward with their types
+    type EventName = keyof GanCubeEventMap;
+    const events: EventName[] = [
       'cubeStateChanged',
       'gyroData',
       'move',
@@ -169,8 +171,8 @@ export class BTCube extends EventEmitter {
         this.cube?.off(eventName, (this as any)[`_${eventName}Handler`]);
       }
 
-      // Create a new handler function
-      const forwardHandler = (data: any) => {
+      // Create a new handler function with the correct type
+      const forwardHandler = (data: GanCubeEventMap[typeof eventName]) => {
         // Forward the event with the same name and data
         this.emit(eventName, data);
       };

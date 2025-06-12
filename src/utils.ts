@@ -1,10 +1,19 @@
 /* eslint-disable no-unused-expressions */
 
 /**
- * Simple event emitter class for handling custom events
+ * Type definition for event handlers
  */
-export class EventEmitter {
-  private events: Record<string, Array<(data: any) => void>> = {};
+export type EventHandler<T> = (data: T) => void;
+
+/**
+ * Simple event emitter class for handling custom events with typed events and payloads
+ *
+ * @template TEventMap - A record mapping event names to their payload types
+ */
+export class EventEmitter<TEventMap extends Record<string, any> = Record<string, any>> {
+  private events: {
+    [K in keyof TEventMap]?: Array<EventHandler<TEventMap[K]>>;
+  } = {};
 
   private readonly instanceId: string;
 
@@ -13,42 +22,52 @@ export class EventEmitter {
   }
 
   /**
-   * Register an event listener
-   * @param event - Event name
-   * @param callback - Callback function
+   * Register an event listener with type-safe event name and payload
+   * @param event - Event name (must be a key of TEventMap)
+   * @param callback - Callback function with properly typed payload
    */
-  public on(event: string, callback: (data: any) => void): void {
+  public on<K extends keyof TEventMap & string>(
+    event: K,
+    callback: EventHandler<TEventMap[K]>,
+  ): void {
     if (!this.events[event]) {
       this.events[event] = [];
     }
-    this.events[event].push(callback);
+    this.events[event]!.push(callback);
   }
 
   /**
    * Remove an event listener
-   * @param event - Event name
+   * @param event - Event name (must be a key of TEventMap)
    * @param callback - Callback function to remove
    */
-  public off(event: string, callback: (data: any) => void): void {
+  public off<K extends keyof TEventMap & string>(
+    event: K,
+    callback: EventHandler<TEventMap[K]>,
+  ): void {
     if (!this.events[event]) return;
-    const initialLength = this.events[event].length;
-    this.events[event] = this.events[event].filter((cb) => cb !== callback);
+    this.events[event] = this.events[event]!.filter(
+      (cb) => cb !== callback,
+    ) as any;
   }
 
   /**
-   * Emit an event with data
-   * @param event - Event name
-   * @param data - Event data
+   * Emit an event with properly typed data
+   * @param event - Event name (must be a key of TEventMap)
+   * @param data - Event data (must match the type defined for this event)
    */
-  public emit(event: string, data: any): void {
+  public emit<K extends keyof TEventMap & string>(
+    event: K,
+    data: TEventMap[K],
+  ): void {
     console.log(`[EventEmitter ${this.instanceId}] Emitting event: ${event}`, data);
     if (!this.events[event]) {
       console.log(`[EventEmitter ${this.instanceId}] No listeners for event: ${event}`);
       return;
     }
-    console.log(`[EventEmitter ${this.instanceId}] Calling ${this.events[event].length} listeners for event: ${event}`);
+    console.log(`[EventEmitter ${this.instanceId}] Calling ${this.events[event]!.length} listeners for event: ${event}`);
 
-    this.events[event].forEach((callback) => {
+    this.events[event]!.forEach((callback) => {
       try {
         callback(data);
       } catch (err) {

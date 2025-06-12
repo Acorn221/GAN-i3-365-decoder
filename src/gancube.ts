@@ -6,7 +6,42 @@ import { AES128 } from './aes128';
 import { matchUUID, EventEmitter } from './utils';
 import { CubeNumberConverter } from './cubenum';
 
-export class GanCube extends EventEmitter {
+/**
+ * Event types for GanCube
+ * This is exported so it can be reused by other components
+ */
+export interface GanCubeEventMap {
+  // Gyroscope data event
+  gyroData: {
+    x: number;
+    y: number;
+    z: number;
+    timestamp: number;
+  };
+  
+  // Cube state changed event
+  cubeStateChanged: {
+    facelet: string;
+    corners?: number[];
+    edges?: number[];
+    move?: string;
+    timestamp: number;
+  };
+  
+  // Cube solved event
+  cubeSolved: Record<string, never>;
+  
+  // Cube unsolved event
+  unSolved: Record<string, never>;
+  
+  // Move event
+  move: {
+    move: string;
+    time: number;
+  };
+}
+
+export class GanCube extends EventEmitter<GanCubeEventMap> {
 	private readonly debug: boolean = true; // Enable debug mode temporarily to help diagnose issues
 	
 	// Internal state storage

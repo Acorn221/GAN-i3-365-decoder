@@ -19,20 +19,6 @@ const App = () => {
       console.log('[App] Created BTCube instance with ID:', (cube as any).getInstanceId?.());
       btCubeRef.current = cube;
       setBtCube(cube);
-
-      // Test event emission from App component
-      console.log('[App] Testing event emission');
-      setTimeout(() => {
-        if (btCubeRef.current) {
-          console.log('[App] Emitting test event from App');
-          btCubeRef.current.emit('cubeStateChanged', {
-            facelet: 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB',
-            move: 'R',
-            timestamp: Date.now(),
-            source: 'App',
-          });
-        }
-      }, 1000);
     }
   }, []);
   const [count, setCount] = React.useState(0);
