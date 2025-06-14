@@ -986,6 +986,10 @@ export class GanCube extends EventEmitter<GanCubeEventMap> {
 		return this.GAN_CIC_LIST;
 	}
 
+	public get facelets(): string {
+		return this.latestFacelet;
+	}
+
 
   public getStateHex(): string {
     return CubeNumberConverter.cubeNumberToHex(CubeNumberConverter.cubeStateToNumber(
