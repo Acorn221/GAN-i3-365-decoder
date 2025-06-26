@@ -284,21 +284,3 @@ export class CubeNumberConverter {
     return BigInt(`0x${hex}`);
   }
 }
-
-// Example usage with your GAN cube:
-/*
-// In your GanCube class, add this method:
-public getCubeNumber(): bigint {
-  return CubeNumberConverter.cubeStateToNumber(this.prevCubie.ca, this.prevCubie.ea);
-}
-
-// To get a cube number at any time:
-const cubeNumber = ganCube.getCubeNumber();
-console.log('Cube number:', cubeNumber.toString());
-console.log('Cube number (hex):', CubeNumberConverter.cubeNumberToHex(cubeNumber));
-
-// To restore a cube state from a number:
-const restoredState = CubeNumberConverter.numberToCubeState(cubeNumber);
-console.log('Restored corners:', restoredState.ca);
-console.log('Restored edges:', restoredState.ea);
-*/
